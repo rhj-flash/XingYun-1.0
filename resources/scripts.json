@@ -1,0 +1,72 @@
+[
+    {
+        "name": "VPN",
+        "type": "file",
+        "value": "D:/VPN/v2rayN-Core/v2rayN.exe"
+    },
+    {
+        "name": "Grok",
+        "type": "url",
+        "value": " https://grok.com/chat/"
+    },
+    {
+        "name": "deep_seek",
+        "type": "url",
+        "value": "https://chat.deepseek.com/"
+    },
+    {
+        "name": "Google",
+        "type": "url",
+        "value": "https://www.google.com/"
+    },
+    {
+        "name": "Le Chat - Mistral AI  (VPN节点开伦敦)",
+        "type": "url",
+        "value": "https://chat.mistral.ai/chat"
+    },
+    {
+        "name": "软件网站",
+        "type": "url",
+        "value": "https://www.rjsos.com/win"
+    },
+    {
+        "name": "YouTube",
+        "type": "url",
+        "value": "https://www.youtube.com/"
+    },
+    {
+        "name": "GitHub",
+        "type": "url",
+        "value": "https://github.com/"
+    },
+    {
+        "name": "bilibili.com",
+        "type": "url",
+        "value": "https://www.bilibili.com/"
+    },
+    {
+        "name": "Wikipedia（维基百科）",
+        "type": "url",
+        "value": "https://zh.wikipedia.org/zh-cn/Wikipedia"
+    },
+    {
+        "name": "绘制流程图",
+        "type": "url",
+        "value": "https://www.processon.com/diagrams"
+    },
+    {
+        "name": "公式识别网站",
+        "type": "url",
+        "value": "https://simpletex.cn/ai/latex_ocr"
+    },
+    {
+        "name": "PDF转换网址🔄",
+        "type": "url",
+        "value": "https://www.ilovepdf.com/zh-cn"
+    },
+    {
+        "name": "音频文件转换",
+        "type": "url",
+        "value": "https://www.bearaudiotool.com/zh/tools-list"
+    }
+]
