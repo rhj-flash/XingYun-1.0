@@ -1,0 +1,127 @@
+[
+    {
+        "name": "VPN",
+        "type": "file",
+        "value": "D:/VPN/v2rayN-Core/v2rayN.exe"
+    },
+    {
+        "name": "Chat_GPT",
+        "type": "url",
+        "value": "https://chatgpt.com/g/g-cKXjWStaE-python/c/11c370b8-e7cf-47fb-973e-315b027a4e31"
+    },
+    {
+        "name": "Grok",
+        "type": "url",
+        "value": "https://grok.com/chat/d82aafbe-fc53-43ed-a500-2dc0eac37d7c"
+    },
+    {
+        "name": "残血deep seek",
+        "type": "url",
+        "value": "https://www.wenxiaobai.com/chat/tourist"
+    },
+    {
+        "name": "Le Chat - Mistral AI  (VPN节点开伦敦)",
+        "type": "url",
+        "value": "https://chat.mistral.ai/chat/58a5d6c2-3d5c-443b-8fb5-1934bc293186"
+    },
+    {
+        "name": "Google",
+        "type": "url",
+        "value": "https://www.google.com/"
+    },
+    {
+        "name": "YouTube",
+        "type": "url",
+        "value": "https://www.youtube.com/"
+    },
+    {
+        "name": "deep_seek",
+        "type": "url",
+        "value": "https://chat.deepseek.com/"
+    },
+    {
+        "name": "软件网站",
+        "type": "url",
+        "value": "https://www.rjsos.com/win"
+    },
+    {
+        "name": "豆包",
+        "type": "url",
+        "value": "https://www.doubao.com/"
+    },
+    {
+        "name": "bilibili.com",
+        "type": "url",
+        "value": "https://www.bilibili.com/"
+    },
+    {
+        "name": "GitHub",
+        "type": "url",
+        "value": "https://github.com/"
+    },
+    {
+        "name": "VPN_charge(VPN充值网址)",
+        "type": "url",
+        "value": "https://sakuran.org/"
+    },
+    {
+        "name": "Wikipedia（维基百科）",
+        "type": "url",
+        "value": "https://zh.wikipedia.org/zh-cn/Wikipedia:%E9%A6%96%E9%A1%B5"
+    },
+    {
+        "name": "CSDN",
+        "type": "url",
+        "value": "https://blog.csdn.net/RHJflash?spm=1010.2135.3001.5343"
+    },
+    {
+        "name": "研招网",
+        "type": "url",
+        "value": "https://yzst.chsi.com.cn/index2.html#:~:text=%E4%B8%AD%E5%9B%BD%E7%A0%94%E7%A9%B6%E7%94%9F%E6%8B%9B%E7%94%9F%E4%BF%A1%E6%81%AF%E7%BD%91"
+    },
+    {
+        "name": "公式识别网站",
+        "type": "url",
+        "value": "https://simpletex.cn/ai/latex_ocr"
+    },
+    {
+        "name": "绘制流程图",
+        "type": "url",
+        "value": "https://www.processon.com/diagrams"
+    },
+    {
+        "name": "PDF转换网址🔄",
+        "type": "url",
+        "value": "https://www.ilovepdf.com/zh-cn"
+    },
+    {
+        "name": "音频文件转换",
+        "type": "url",
+        "value": "https://www.bearaudiotool.com/zh/tools-list"
+    },
+    {
+        "name": "破译软件",
+        "type": "url",
+        "value": "https://www.rjsos.com/win"
+    },
+    {
+        "name": "动漫",
+        "type": "url",
+        "value": "https://www.zkk79.com/"
+    },
+    {
+        "name": "看电影🎬",
+        "type": "url",
+        "value": "https://www.kanjuxc.cc/"
+    },
+    {
+        "name": "3DM_游戏查询🎮",
+        "type": "url",
+        "value": "https://www.3dmgame.com/"
+    },
+    {
+        "name": "在在在在在在在在在在在在在在在在在在",
+        "type": "url",
+        "value": "xxxx"
+    }
+]
