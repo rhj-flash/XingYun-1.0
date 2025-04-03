@@ -5,7 +5,11 @@ import json
 import platform
 import shutil
 import sys
-from PyQt5.QtGui import QFontMetricsF
+
+import win32con
+import win32gui
+import win32ui
+from PyQt5.QtGui import QFontMetricsF, QPixmap, QIcon
 import psutil
 import GPUtil
 import subprocess
@@ -27,11 +31,26 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 from window import get_resource_path
 
+# 默认图标路径
+DEFAULT_ICON_PATH = get_resource_path('imge.png')
+
 # 脚本路径
 scripts_path = get_resource_path("resources/scripts.json")
 
 # 缓存机制
 CACHE = {}
+
+# 在文件顶部添加
+from concurrent.futures import ThreadPoolExecutor
+import threading
+
+# 全局缓存
+ICON_CACHE = {}
+CACHE_LOCK = threading.Lock()
+
+# 线程池
+ICON_EXECUTOR = ThreadPoolExecutor(max_workers=5)
+
 
 # **提前加载字典文件**
 dictionary_path = get_resource_path('english_words.txt')
@@ -67,6 +86,90 @@ else:
 
 # 多线程执行器
 executor = ThreadPoolExecutor(max_workers=5)
+
+
+
+
+def get_website_favicon(url, callback=None):
+    """异步获取网站 favicon"""
+    def fetch_icon():
+        with CACHE_LOCK:
+            if url in ICON_CACHE:
+                return ICON_CACHE[url]
+        try:
+            if not url.startswith(('http://', 'https://')):
+                url_normalized = 'https://' + url
+            else:
+                url_normalized = url
+            favicon_url = url_normalized.rstrip('/') + '/favicon.ico'
+            response = requests.get(favicon_url, timeout=2)
+            if response.status_code == 200:
+                pixmap = QPixmap()
+                if pixmap.loadFromData(response.content):
+                    icon = QIcon(pixmap)
+                    if not icon.isNull():
+                        with CACHE_LOCK:
+                            ICON_CACHE[url] = icon
+                        return icon
+        except Exception:
+            pass
+        # 返回默认图标
+        default_icon = QIcon(DEFAULT_ICON_PATH)
+        with CACHE_LOCK:
+            ICON_CACHE[url] = default_icon
+        return default_icon
+
+    if callback:
+        future = ICON_EXECUTOR.submit(fetch_icon)
+        future.add_done_callback(lambda f: callback(f.result()))
+        return QIcon(DEFAULT_ICON_PATH)  # 立即返回默认图标
+    else:
+        return fetch_icon()
+
+def get_file_icon(file_path, callback=None):
+    """异步获取文件图标"""
+    def fetch_icon():
+        with CACHE_LOCK:
+            if file_path in ICON_CACHE:
+                return ICON_CACHE[file_path]
+        try:
+            if platform.system() == "Windows" and os.path.exists(file_path):
+                large, small = win32gui.ExtractIconEx(file_path, 0)
+                if large:
+                    hdc = win32ui.CreateDCFromHandle(win32gui.GetDC(0))
+                    hbmp = win32ui.CreateBitmap()
+                    hbmp.CreateCompatibleBitmap(hdc, 32, 32)
+                    hdc = hdc.CreateCompatibleDC()
+                    hdc.SelectObject(hbmp)
+                    win32gui.DrawIconEx(hdc.GetHandleOutput(), 0, 0, large[0], 32, 32, 0, 0, win32con.DI_NORMAL)
+                    win32gui.DestroyIcon(large[0])
+                    if small:
+                        win32gui.DestroyIcon(small[0])
+                    bmp_info = hbmp.GetInfo()
+                    bmp_str = hbmp.GetBitmapBits(True)
+                    pixmap = QPixmap.fromImage(QtGui.QImage(bmp_str, bmp_info['bmWidth'], bmp_info['bmHeight'],
+                                                           QtGui.QImage.Format_ARGB32))
+                    icon = QIcon(pixmap)
+                    if not icon.isNull():
+                        with CACHE_LOCK:
+                            ICON_CACHE[file_path] = icon
+                        return icon
+        except Exception:
+            pass
+        # 返回默认图标
+        default_icon = QIcon(DEFAULT_ICON_PATH)
+        with CACHE_LOCK:
+            ICON_CACHE[file_path] = default_icon
+        return default_icon
+
+    if callback:
+        future = ICON_EXECUTOR.submit(fetch_icon)
+        future.add_done_callback(lambda f: callback(f.result()))
+        return QIcon(DEFAULT_ICON_PATH)  # 立即返回默认图标
+    else:
+        return fetch_icon()
+
+
 
 def appendLog(log_text_edit, message):
     log_text_edit.append(message)
@@ -505,7 +608,7 @@ def get_network_info():
                     iface_details[iface_name].append(f"  MAC地址: {addr.address}")
 
         for iface_name, details in iface_details.items():
-            interfaces.append(f"——————————————————————————————————————————————————————————————————————————————————————————\n{iface_name}:\n" + "\n".join(details) + "\n")
+            interfaces.append(f"〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰\n{iface_name}:\n" + "\n".join(details) + "\n")
 
         CACHE['network_info'] = interfaces
         return CACHE['network_info']
@@ -538,14 +641,14 @@ def get_wifi_info():
             current_network = "未知"
 
         # 获取当前连接WiFi的详细信息
-        current_wifi_info = f"========================================WIFI信息==========================================\n\n当前WiFi名称: {current_network}\n{current_network_output}"
+        current_wifi_info = f"〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰WIFI信息〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰\n\n当前WiFi名称: {current_network}\n{current_network_output}"
 
         # 获取当前WiFi的密码
         current_profile_output = subprocess.check_output(
             ['netsh', 'wlan', 'show', 'profile', current_network, 'key=clear'], encoding='utf-8')
         current_password_match = re.search(r"Key Content\s*:\s*(.+)", current_profile_output)
         current_password = current_password_match.group(1).strip() if current_password_match else "未知"
-        current_wifi_info += f"——————————————————————————————————————————————————————————————————————————————————————————\n当前WiFi密码: {current_password}\n"
+        current_wifi_info += f"〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰\n当前WiFi密码: {current_password}\n"
 
         # 获取当前连接WiFi的其他详细信息
         network_type_match = re.search(r"Network type\s*:\s*(.+)", current_network_output)
@@ -583,7 +686,7 @@ def get_wifi_info():
         current_wifi_info += f"信道: {channel}\n"
         current_wifi_info += f"认证方式: {authentication}\n"
         current_wifi_info += f"加密方式: {cipher}\n"
-        current_wifi_info += f"连接模式: {connection_mode}\n=====================================WiFi历史日志========================================="
+        current_wifi_info += f"连接模式: {connection_mode}\n〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰WiFi历史日志〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰"
 
 
         # 获取所有WiFi配置文件列表
@@ -628,7 +731,7 @@ def get_wifi_info():
 
         recent_wifi_info = ""
         for profile_name, password, authentication, cipher, connection_mode in recent_connections:
-            recent_wifi_info += f"——————————————————————————————————————————————————————————————————————————————————————————\nWiFi名称: {profile_name}\n"
+            recent_wifi_info += f"〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰\nWiFi名称: {profile_name}\n"
             recent_wifi_info += f"密码: {password}\n"
             recent_wifi_info += f"认证方式: {authentication}\n"
             recent_wifi_info += f"加密方式: {cipher}\n"
