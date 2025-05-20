@@ -2,7 +2,7 @@ import hashlib
 import sys
 import os
 import weakref
-from PyQt5.QtGui import QPainterPath
+from PyQt5.QtGui import QPainterPath, QImage, QLinearGradient
 import threading  # 确保导入 threading 模块
 from datetime import datetime
 from urllib.parse import urlparse, urljoin
@@ -19,38 +19,612 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import QRect, QEasingCurve
 from PyQt5.uic.properties import QtCore
+from attr import has
 from bs4 import BeautifulSoup
-from pkg_resources import run_script
 
 from function import *
 from PyQt5.QtCore import QVariantAnimation, QEasingCurve
 from PyQt5.QtGui import QFontMetrics, QPainter
 from PyQt5.QtWidgets import QGroupBox
+from selenium import webdriver
 
-#    EXE打包指令       pyinstaller --noconsole --onefile --name Xingyun --clean --icon="resources/icon.ico" --add-data "resources/*;resources" window.py
+#    EXE打包指令
+"""
+=======================
+PyInstaller打包配置说明
+=======================
+
+使用以下命令进行打包（PowerShell格式）：
+
+pyinstaller --noconsole --onefile --name Xingyun `
+    --clean `
+    --icon="resources/icon.ico" `
+    --add-data "resources/english_words.txt;resources" `
+    --add-data "resources/icon.ico;resources" `
+    --add-data "resources/*;resources" `
+    window.py
+"""
+
+# 日间模式样式
+display_area_style = """
+    QTextEdit {
+        border: 1px solid #CCCCCC;
+        border-radius: 8px;
+        background-color: #F9F9F9;
+        font-family: 'Courier New', monospace;
+        font-size: 14px;
+        color: #111111;
+        padding: 10px;
+    }
+    QScrollBar:vertical, QScrollBar:horizontal {
+        border: none;
+        background: #F0F0F0;
+        width: 10px;
+        height: 10px;
+        margin: 0px;  /* 解决错位问题    右侧滚动条*/
+        border-radius: 5px;
+    }
+    QScrollBar::handle:vertical, QScrollBar::handle:horizontal {
+        background: #BBBBBB;
+        min-height: 20px;
+        min-width: 20px;
+        border-radius: 5px;
+    }
+    QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical,
+    QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+        background: none;
+    }
+"""
+# 定义 QMessageBox 的样式表
+message_box_style = """
+QMessageBox {
+    background-color: #ffffff;  /* 设置背景颜色为白色 */
+    color: #333333;  /* 设置文本颜色 */
+    border: 2px solid #0078d7;  /* 设置边框颜色和宽度 */
+    border-radius: 15px;  /* 设置消息框整体的圆角半径 */
+    padding: 20px;  /* 设置消息框内边距 */
+}
+QMessageBox QLabel {
+    font-size: 16px;  /* 设置文本字体大小 */
+    margin: 10px;  /* 设置标签外边距 */
+}
+QMessageBox QPushButton {
+    background-color: #0078d7;  /* 设置按钮背景颜色 */
+    color: white;  /* 设置按钮文本颜色 */
+    padding: 12px 25px;  /* 设置按钮内边距 */
+    border: none;  /* 去除按钮边框 */
+    border-radius: 10px;  /* 设置按钮的圆角半径 */
+    font-size: 16px;  /* 设置按钮文本字体大小 */
+    margin: 5px 10px;  /* 设置按钮外边距 */
+}
+QMessageBox QPushButton:hover {
+    background-color: #0056b3;  /* 设置按钮悬停时的背景颜色 */
+}
+"""
+
+list_widget_style = """
+    /* 对 QListWidget 整体进行样式设置 */
+    QListWidget {
+        border: 1px solid #CCCCCC;  /* 设置列表控件的边框宽度为 1 像素，颜色为浅灰色 */
+        border-radius: 8px;  /* 设置列表控件的边框圆角半径为 8 像素，使其边角更圆润 */
+        background-color: #F5F5F5;  /* 设置列表控件的背景颜色为淡淡的灰色 */
+        font-size: 14px;  /* 设置列表控件内文本的字体大小为 14 像素 */
+        color: #444444;  /* 设置列表控件内文本的颜色为深灰色 */
+    }
+    /* 对 QListWidget 中的每个列表项进行样式设置 */
+    QListWidget::item {
+        padding: 10px;  /* 设置列表项的内边距为 10 像素，使内容与边框有一定间隔 */
+        white-space: nowrap;  /* 设置列表项内的文本不自动换行，保持单行显示 */
+    }
+    /* 对鼠标悬停在 QListWidget 列表项上时的样式进行设置 */
+    QListWidget::item:hover {
+        background-color: #C0C0C0;  /* 当鼠标悬停时，列表项的背景颜色变为中灰色 */
+        border-radius: 8px;  /* 当鼠标悬停时，列表项的边框圆角半径为 8 像素 */
+    }
+    /* 对 QListWidget 中被选中的列表项进行样式设置 */
+    QListWidget::item:selected {
+        background-color: #A0A0A0;  /* 被选中的列表项背景颜色变为深一些的灰色 */
+        color: #000000;  /* 被选中的列表项文本颜色变为黑色 */
+        font-weight: bold;  /* 被选中的列表项文本字体加粗 */
+    }
+    /* 对 QListWidget 列表项获得焦点时的样式进行设置，这里去除了默认的焦点轮廓 */
+    QListWidget::item:focus {
+        outline: none;
+    }
+    /* 对 QListWidget 控件本身获得焦点时的样式进行设置，同样去除了默认的焦点轮廓 */
+    QListWidget:focus {
+        outline: none;
+    }
+"""
+
+dialog_style = """
+QDialog {
+    background-color: #ffffff;  /* 白色背景 */
+
+    border-radius: 15px;  /* 圆角 */
+    padding: 30px;  /* 内边距 */
+}
+QLabel {
+    font-size: 20px;  /* 标签字体大小 */
+    color: #333333;  /* 标签字体颜色 */
+    margin-bottom: 10px;  /* 标签底部外边距 */
+}
+QPushButton {
+    background-color: #0078d7;  /* 按钮背景颜色 */
+    color: white;  /* 按钮字体颜色 */
+    padding: 12px 25px;  /* 按钮内边距 */
+    border: none;  /* 无边框 */
+    border-radius: 10px;  /* 按钮圆角 */
+    font-size: 16px;  /* 按钮字体大小 */
+    margin: 5px 0;  /* 按钮外边距 */
+}
+QPushButton:hover {
+    background-color: #0056b3;  /* 按钮悬停背景颜色 */
+}
+"""
+
+search_edit_style = """
+    QLineEdit {
+        border: 1px solid #CCCCCC;
+        border-radius: 25px;
+        padding: 5px;
+        font-size: 23px;
+        font-weight: bold;  /* 输入字体加粗 */
+        min-width: 100px;
+        height:70px;
+        background-color: #F5F5F5;
+        color: #444444;
+        
+    }
+    QLineEdit:focus {
+        border: 3px solid #A0A0A0;
+        background-color: #F5F5F5;
+    }
+    QLineEdit::placeholder {
+        color: #888888;
+        font-size: 18px;
+        font-style: italic;  /* 提示文字保持斜体 */
+    }
+"""
+
+completer_popup_style = """
+    QListView {
+        font-size: 18px;  /* 调整字体大小 */
+        padding: 8px;
+        min-width: 300px;  /* 增加最小宽度 */
+        min-height: 250px;  /* ✅ 增加预览框的最小高度 */
+    }
+"""
+
+main_window_style = """
+    QMainWindow, QWidget {
+        background-color: #F0F2F5;  /* 统一主窗口和所有子部件背景 */
+    }
+    QSplitter {
+        background-color: #F0F2F5;  /* 确保分割器背景一致 */
+    }
+    QSplitter::handle {
+        background-color: #F0F2F5;  /* 分割器手柄背景 */
+    }
+"""
+
+left_widget_style = """
+    QWidget {
+        background-color: #F0F2F5;  /* 浅蓝色背景 */
+        border-radius: 8px;  /* 圆角 */
+    }
+    QScrollBar:vertical {
+        border: none;
+        background: #F0F0F0;
+        width: 10px;
+        margin: 0px;
+        border-radius: 5px;
+    }
+    QScrollBar::handle:vertical {
+        background: #BBBBBB;
+        min-height: 20px;
+        border-radius: 5px;
+    }
+    QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+        background: none;
+    }
+    QScrollBar:horizontal {
+        border: none;
+        background: #F0F0F0;
+        height: 10px;
+        margin: 0px;
+        border-radius: 5px;
+    }
+    QScrollBar::handle:horizontal {
+        background: #BBBBBB;
+        min-width: 20px;
+        border-radius: 5px; 
+    }
+    QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+        background: none;
+    }
+
+"""
+
+button_style = """
+    QPushButton {
+        background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
+                                          stop:0 rgba(180, 180, 180, 1), stop:1 rgba(140, 140, 140, 1));
+        border: 1px solid #BBBBBB;
+        border-radius: 8px;
+        color: #000000;  /* 更黑亮的文本颜色 */
+        font-size: 16px;
+        font-weight: bold;
+        padding: 12px 25px;
+        text-align: center;
+        text-decoration: none;
+        margin: 4px 2px;
+        box-shadow: 3px 3px 5px rgba(0, 0, 0, 0.1);
+    }
+
+    QPushButton:hover {
+        background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
+                                          stop:0 rgba(140, 140, 140, 1), stop:1 rgba(100, 100, 100, 1));
+        border: 1px solid #AAAAAA;
+    }
+
+    QPushButton:pressed {
+        background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
+                                          stop:0 rgba(100, 100, 100, 1), stop:1 rgba(80, 80, 80, 1));
+        border: 1px solid #999999;
+        box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+    }
+"""
+
+hebing_button_style = """
+            QDialog {
+                background-color: #F5F7FA;
+                border-radius: 12px;
+                border: 1px solid #D0D0D0;
+                font-family: 'Microsoft YaHei', Arial, sans-serif;
+            }
+            QLabel {
+                font-size: 16px;
+                color: #333333;
+                padding: 4px;
+            }
+            QLineEdit {
+                border: 1px solid #BBBBBB;
+                border-radius: 8px;
+                padding: 8px 12px;
+                font-size: 14px;
+                background-color: #FFFFFF;
+                min-height: 36px;
+                selection-background-color: #A0A0A0;
+                box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+            }
+            QLineEdit:focus {
+                border: 1px solid #BBBBBB;
+                box-shadow: 0 0 4px rgba(187, 187, 187, 0.5);
+            }
+            QPushButton {
+                background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
+                                                stop:0 rgba(180, 180, 180, 1), 
+                                                stop:1 rgba(140, 140, 140, 1));
+                border: 1px solid #BBBBBB;
+                border-radius: 8px;
+                color: #000000;
+                font-size: 14px;
+                font-weight: bold;
+                padding: 10px 20px;
+                min-width: 100px;
+                min-height: 40px;
+                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            }
+            QPushButton:hover {
+                background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
+                                                stop:0 rgba(140, 140, 140, 1), 
+                                                stop:1 rgba(100, 100, 100, 1));
+                border: 1px solid #AAAAAA;
+            }
+            QPushButton:pressed {
+                background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
+                                                stop:0 rgba(100, 100, 100, 1), 
+                                                stop:1 rgba(80, 80, 80, 1));
+                border: 1px solid #999999;
+                box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+            }
+        """
+# 夜间模式样式
+# 定义显示区域的样式表
+display_area_style_night = """
+    QTextEdit {
+        border: 1px solid #555555;
+        border-radius: 8px;
+        background-color: #111111;
+        font-family: 'Courier New', monospace;
+        font-size: 14px;
+        color: #EEEEEE;
+        padding: 10px;
+    }
+    QScrollBar:vertical, QScrollBar:horizontal {
+        border: none;
+        background: #222222;
+        width: 10px;
+        height: 10px;
+        margin: 0px;  /* 解决错位问题 */
+        border-radius: 5px;
+    }
+    QScrollBar::handle:vertical, QScrollBar::handle:horizontal {
+        background: #777777;
+        min-height: 20px;
+        min-width: 20px;
+        border-radius: 5px;
+    }
+    QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical,
+    QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+        background: none;
+    }
+"""
+
+# 定义 QMessageBox 的样式表
+message_box_style_night = """
+QMessageBox {
+    background-color: #222222;  /* 设置背景颜色为深灰色 */
+    color: #EEEEEE;  /* 设置文本颜色 */
+    border: 2px solid #0078d7;  /* 设置边框颜色和宽度 */
+    border-radius: 15px;  /* 设置消息框整体的圆角半径 */
+    padding: 20px;  /* 设置消息框内边距 */
+}
+QMessageBox QLabel {
+    font-size: 16px;  /* 设置文本字体大小 */
+    margin: 10px;  /* 设置标签外边距 */
+}
+QMessageBox QPushButton {
+    background-color: #0078d7;  /* 设置按钮背景颜色 */
+    color: white;  /* 设置按钮文本颜色 */
+    padding: 12px 25px;  /* 设置按钮内边距 */
+    border: none;  /* 去除按钮边框 */
+    border-radius: 10px;  /* 设置按钮的圆角半径 */
+    font-size: 16px;  /* 设置按钮文本字体大小 */
+    margin: 5px 10px;  /* 设置按钮外边距 */
+}
+QMessageBox QPushButton:hover {
+    background-color: #0056b3;  /* 设置按钮悬停时的背景颜色 */
+}
+"""
+
+list_widget_style_night = """
+    /* 对 QListWidget 整体进行样式设置，用于夜间模式 */
+    QListWidget {
+        border: 1px solid #555555;  /* 设置列表控件的边框宽度为 1 像素，颜色为深灰色 */
+        border-radius: 8px;  /* 设置列表控件的边框圆角半径为 8 像素，使边角呈现圆润效果 */
+        background-color: #222222;  /* 将列表控件的背景颜色设置为深灰色，适配夜间模式 */
+        font-size: 14px;  /* 设置列表控件内文本的字体大小为 14 像素 */
+        color: #EEEEEE;  /* 设置列表控件内文本的颜色为浅灰色，在深色背景下更易读 */
+    }
+    /* 对 QListWidget 中的每个列表项进行样式设置 */
+    QListWidget::item {
+        padding: 10px;  /* 设置列表项的内边距为 10 像素，使列表项内的内容与边框有一定间隔 */
+        white-space: nowrap;  /* 使列表项内的文本不自动换行，保持单行显示 */
+    }
+    /* 对鼠标悬停在 QListWidget 列表项上时的样式进行设置 */
+    QListWidget::item:hover {
+        background-color: #444444;  /* 当鼠标悬停在列表项上时，背景颜色变为稍浅一些的深灰色 */
+        border-radius: 8px;  /* 鼠标悬停时，列表项的边框圆角半径保持为 8 像素 */
+    }
+    /* 对 QListWidget 中被选中的列表项进行样式设置 */
+    QListWidget::item:selected {
+        background-color: #555555;  /* 被选中的列表项背景颜色变为更深一点的灰色 */
+        color: #FFFFFF;  /* 被选中的列表项文本颜色设置为白色，突出显示 */
+        font-weight: bold;  /* 被选中的列表项文本字体加粗，进一步强调选中状态 */
+    }
+    /* 对 QListWidget 列表项获得焦点时的样式进行设置，去除默认的焦点轮廓 */
+    QListWidget::item:focus {
+        outline: none;
+    }
+    /* 对 QListWidget 控件本身获得焦点时的样式进行设置，去除默认的焦点轮廓 */
+    QListWidget:focus {
+        outline: none;
+    }
+"""
+
+dialog_style_night = """
+QDialog {
+    background-color: #222222;  /* 深灰色背景 */
+    border-radius: 15px;  /* 圆角 */
+    padding: 30px;  /* 内边距 */
+}
+QLabel {
+    font-size: 20px;  /* 标签字体大小 */
+    color: #EEEEEE;  /* 标签字体颜色 */
+    margin-bottom: 10px;  /* 标签底部外边距 */
+}
+QPushButton {
+    background-color: #0078d7;  /* 按钮背景颜色 */
+    color: white;  /* 按钮字体颜色 */
+    padding: 12px 25px;  /* 按钮内边距 */
+    border: none;  /* 无边框 */
+    border-radius: 10px;  /* 按钮圆角 */
+    font-size: 16px;  /* 按钮字体大小 */
+    margin: 5px 0;  /* 按钮外边距 */
+}
+QPushButton:hover {
+    background-color: #0056b3;  /* 按钮悬停背景颜色 */
+}
+"""
+
+search_edit_style_night = """
+    QLineEdit {
+        border: 1px solid #555555;
+        border-radius: 25px;
+        padding: 5px;
+        font-size: 23px;
+        font-weight: bold;  /* 输入字体加粗 */
+        min-width: 100px;
+        height:70px;
+        background-color: #222222;
+        color: #EEEEEE;
+    }
+    QLineEdit:focus {
+        border: 3px solid #777777;
+        background-color: #222222;
+    }
+    QLineEdit::placeholder {
+        color: #AAAAAA;
+        font-size: 18px;
+        font-style: italic;  /* 提示文字保持斜体 */
+    }
+"""
+
+completer_popup_style_night = """
+    QListView {
+        font-size: 18px;  /* 调整字体大小 */
+        padding: 8px;
+        min-width: 300px;  /* 增加最小宽度 */
+        min-height: 250px;  /* ✅ 增加预览框的最小高度 */
+        background-color: #222222;
+        color: #EEEEEE;
+    }
+"""
+
+main_window_style_night = """
+    QMainWindow {
+        background-color: #000000;
+    }
+    QWidget {
+        background-color: #F5F7FA;
+    }
+"""
+
+left_widget_style_night = """
+    QTextEdit {
+        border: 1px solid #555555;
+        border-radius: 8px;
+        background-color: #111111;
+        font-family: 'Courier New', monospace;
+        font-size: 14px;
+        color: #EEEEEE;
+        padding: 10px;
+    }
+    QScrollBar:vertical, QScrollBar:horizontal {
+        border: none;
+        background: #222222;
+        width: 10px;
+        height: 10px;
+        margin: 0px;  /* 解决错位问题 */
+        border-radius: 5px;
+    }
+    QScrollBar::handle:vertical, QScrollBar::handle:horizontal {
+        background: #777777;
+        min-height: 20px;
+        min-width: 20px;
+        border-radius: 5px;
+    }
+    QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical,
+    QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+        background: none;
+    }
+
+"""
+
+button_style_night = """
+    QPushButton {
+        background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
+                                          stop:0 rgba(80, 80, 80, 1), stop:1 rgba(40, 40, 40, 1));
+        border: 1px solid #555555;
+        border-radius: 8px;
+        color: #FFFFFF;  /* 更亮的文本颜色 */
+        font-size: 16px;
+        font-weight: bold;
+        padding: 12px 25px;
+        text-align: center;
+        text-decoration: none;
+        margin: 4px 2px;
+        box-shadow: 3px 3px 5px rgba(0, 0, 0, 0.3);
+    }
+
+    QPushButton:hover {
+        background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
+                                          stop:0 rgba(40, 40, 40, 1), stop:1 rgba(20, 20, 20, 1));
+        border: 1px solid #444444;
+    }
+
+    QPushButton:pressed {
+        background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
+                                          stop:0 rgba(20, 20, 20, 1), stop:1 rgba(10, 10, 10, 1));
+        border: 1px solid #333333;
+        box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+    }
+"""
 
 
+def ensure_word_file():
+    """确保单词表文件可访问"""
+    # 1. 尝试从打包资源获取
+    word_path = get_resource_path("english_words.txt")
+    if os.path.exists(word_path):
+        return word_path
 
-def get_resource_path(filename):
-    """获取资源文件路径，支持开发和打包环境，并在打包时自动生成资源文件夹"""
+    # 2. 尝试从用户目录获取
+    user_dir = os.path.join(os.path.expanduser("~"), "Xingyun")
+    os.makedirs(user_dir, exist_ok=True)
+    user_path = os.path.join(user_dir, "english_words.txt")
+
+    if os.path.exists(user_path):
+        return user_path
+
+    # 3. 如果都没有，从程序内复制（如果可能）
     try:
-        if getattr(sys, 'frozen', False):
-            # 打包环境：使用用户主目录下的 Xingyun 文件夹
-            base_path = os.path.join(os.path.expanduser("~"), "Xingyun")
-            resource_path = os.path.join(base_path, filename)
-            # 自动创建目录
-            os.makedirs(os.path.dirname(resource_path), exist_ok=True)
-        else:
-            # 开发环境：使用项目根目录下的 resources 文件夹
-            base_path = os.path.dirname(os.path.abspath(__file__))
-            resource_path = os.path.join(base_path, "resources", filename)
-            # 确保开发环境下的目录也存在
-            os.makedirs(os.path.dirname(resource_path), exist_ok=True)
+        import pkgutil
+        word_data = pkgutil.get_data(__name__, "resources/english_words.txt")
+        if word_data:
+            with open(user_path, 'wb') as f:
+                f.write(word_data)
+            return user_path
+    except:
+        pass
 
-        return resource_path
-    except Exception as e:
-        print(f"获取资源路径错误: {e}")
-        return filename
+    return None  # 无法获取单词表
+
+
+def get_resource_path(relative_path):
+    """获取资源文件路径（开发/打包环境兼容）
+    同时支持单词表、主图标和缓存图标
+    """
+    is_frozen = getattr(sys, 'frozen', False)
+
+    # 处理图标缓存路径
+    if relative_path.startswith("icon_cache/"):
+        if is_frozen:
+            # 打包环境 - 使用用户目录
+            base_dir = os.path.join(os.path.expanduser("~"), "Xingyun")
+        else:
+            # 开发环境 - 使用项目目录
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+
+        cache_dir = os.path.join(base_dir, "icon_cache")
+        os.makedirs(cache_dir, exist_ok=True)
+        return os.path.join(cache_dir, relative_path[11:])
+
+    # 处理其他资源路径
+    if is_frozen:
+        # 打包环境优先使用临时解压目录
+        base_path = getattr(sys, '_MEIPASS', os.path.dirname(sys.executable))
+    else:
+        # 开发环境使用项目目录
+        base_path = os.path.dirname(os.path.abspath(__file__))
+
+    # 标准化资源路径
+    if relative_path.startswith("resources/"):
+        relative_path = relative_path[9:]
+
+    full_path = os.path.join(base_path, "resources", relative_path)
+
+    # 后备检查：如果文件不存在，尝试用户目录
+    if not os.path.exists(full_path) and is_frozen:
+        user_dir = os.path.join(os.path.expanduser("~"), "Xingyun")
+        user_path = os.path.join(user_dir, "resources", relative_path)
+        if os.path.exists(user_path):
+            return user_path
+
+    return full_path
+
 
 # 用于线程安全的锁
 CACHE_LOCK = threading.Lock()
@@ -60,6 +634,39 @@ ICON_CACHE = {}
 ICON_EXECUTOR = ThreadPoolExecutor(max_workers=50)
 # 默认图标路径
 DEFAULT_ICON_PATH = get_resource_path("imge.png")
+# 夜间模式标志
+night_mode = False  # Add this line
+left_widget = None  # 新增全局变量声明
+original_english_btn_style = None  # 已存在
+original_night_mode_btn_style = None  # 新增全局变量声明
+
+
+def get_dynamic_favicon(url):
+    options = webdriver.ChromeOptions()
+    options.add_argument('--headless')
+    driver = webdriver.Chrome(options=options)
+    driver.get(url)
+
+    # 执行JavaScript获取动态图标
+    icons = driver.execute_script("""
+        return Array.from(document.querySelectorAll('link[rel*="icon"]'))
+            .map(link => link.href);
+    """)
+    driver.quit()
+    return icons
+
+
+def validate_cache():
+    cache_dir = get_resource_path("icon_cache")
+    for file in os.listdir(cache_dir):
+        path = os.path.join(cache_dir, file)
+        try:
+            img = QImage(path)
+            if img.isNull() or img.width() > 512:
+                os.remove(path)
+        except:
+            os.remove(path)
+
 
 def get_default_icon():
     """获取默认图标"""
@@ -84,36 +691,142 @@ def extract_default_icon():
 def get_website_favicon(url, callback=None):
     """
     改进版的网站图标获取函数，支持多种图标获取方式
-
-    参数:
-        url: 网站URL
-        callback: 获取完成后的回调函数(异步模式下使用)
-
-    返回:
-        同步模式下返回QIcon，异步模式下立即返回默认图标并通过回调返回实际图标
+    （原代码结构保持不变，仅添加缓存功能）
     """
 
+    # ---------- 新增缓存功能 ----------
+    def get_cache_file(url):
+        """获取缓存文件路径"""
+        url_hash = hashlib.md5(url.encode('utf-8')).hexdigest()
+        cache_dir = get_resource_path("icon_cache")
+        os.makedirs(cache_dir, exist_ok=True)  # 自动创建目录
+        return os.path.join(cache_dir, f"{url_hash}.ico")
+
+    def load_cached_icon(url):
+        """从本地缓存加载图标"""
+        cache_file = get_cache_file(url)
+        if os.path.exists(cache_file):
+            try:
+                pixmap = QPixmap(cache_file)
+                if not pixmap.isNull():
+                    icon = QIcon(pixmap)
+                    # 更新内存缓存
+                    with CACHE_LOCK:
+                        ICON_CACHE[url] = icon
+                    print(f"Loaded from cache: {cache_file}")
+                    return icon
+            except Exception as e:
+                print(f"Cache read error: {e}")
+        return None
+
+    def save_icon_cache(url, icon_data):
+        """保存图标到本地缓存"""
+        try:
+            cache_file = get_cache_file(url)
+            with open(cache_file, 'wb') as f:
+                f.write(icon_data)
+            print(f"Cached icon: {cache_file}")
+        except Exception as e:
+            print(f"Cache save failed: {e}")
+
+    # ---------- 原始获取逻辑（完全保持不变） ----------
+    def normalize_url(url):
+        """规范化URL，添加协议等"""
+        if not url.startswith(('http://', 'https://')):
+            url = 'https://' + url
+        try:
+            parsed = urlparse(url)
+            if not parsed.netloc:
+                return None
+            if not parsed.scheme:
+                parsed = parsed._replace(scheme='https')
+            return parsed.geturl()
+        except Exception:
+            return None
+
+    def try_multiple_icon_sources(url):
+        """尝试从多个可能的来源获取图标（原逻辑不变）"""
+        parsed = urlparse(url)
+        base_url = f"{parsed.scheme}://{parsed.netloc}"
+
+        icon_urls = [
+            f"{base_url}/favicon.ico",
+            f"{url.rstrip('/')}/favicon.ico",
+        ]
+
+        try:
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+            response = requests.get(url, headers=headers, timeout=5)
+            if response.status_code == 200:
+                soup = BeautifulSoup(response.text, 'html.parser')
+                icon_links = []
+                icon_links.extend(soup.find_all('link', rel=lambda x: x and 'icon' in x.lower()))
+                icon_links.extend(soup.find_all('link', rel=lambda x: x and 'apple-touch-icon' in x.lower()))
+                icon_links.extend(soup.find_all('meta', attrs={'name': 'msapplication-TileImage'}))
+                icon_links.extend(soup.find_all('meta', attrs={'property': 'og:image'}))
+                icon_links.extend(soup.find_all('meta', attrs={'name': 'twitter:image'}))
+
+                for link in icon_links:
+                    href = link.get('href') if link.name == 'link' else link.get('content')
+                    if href:
+                        if not href.startswith(('http://', 'https://')):
+                            href = urljoin(url, href)
+                        icon_urls.append(href)
+        except Exception:
+            pass
+
+        # 第三方服务尝试（原顺序不变）
+        domain = parsed.netloc
+        icon_urls.extend([
+            f"https://www.google.com/s2/favicons?domain={domain}",
+            f"https://api.faviconkit.com/{domain}/144",
+            f"https://icons.duckduckgo.com/ip2/{domain}.ico",
+            f"https://favicons.githubusercontent.com/{domain}"
+        ])
+
+        # 尺寸和名称变体（原逻辑不变）
+        for size in [16, 32, 64, 128]:
+            icon_urls.append(f"{base_url}/favicon-{size}x{size}.png")
+
+        for name in ['favicon', 'icon', 'logo']:
+            for ext in ['.ico', '.png', '.jpg', '.jpeg', '.gif']:
+                icon_urls.append(f"{base_url}/{name}{ext}")
+
+        for icon_url in icon_urls:
+            try:
+                response = requests.get(icon_url, headers=headers, timeout=3, stream=True)
+                if response.status_code == 200 and 'image' in response.headers.get('Content-Type', '').lower():
+                    return response.content
+            except Exception:
+                continue
+        return None
+
+    # ---------- 修改后的主流程 ----------
     def fetch_icon():
+        # 1. 检查内存缓存
         with CACHE_LOCK:
             if url in ICON_CACHE:
                 return ICON_CACHE[url]
 
-        # 检查本地缓存
-        cached_icon = check_local_cache(url)
+        # 2. 检查本地缓存（新增）
+        cached_icon = load_cached_icon(url)
         if cached_icon:
             return cached_icon
 
-        # 规范化URL
+        # 3. 执行原始获取逻辑
         normalized_url = normalize_url(url)
         if not normalized_url:
             return get_default_icon()
 
-        # 尝试多种方式获取图标
         icon_data = try_multiple_icon_sources(normalized_url)
 
         if icon_data:
-            # 保存到缓存
-            save_icon_to_cache(url, icon_data)
+            # 4. 保存到缓存（新增）
+            save_icon_cache(url, icon_data)
+
+            # 创建QIcon（原逻辑）
             pixmap = QPixmap()
             if pixmap.loadFromData(icon_data):
                 icon = QIcon(pixmap)
@@ -123,10 +836,11 @@ def get_website_favicon(url, callback=None):
 
         return get_default_icon()
 
+    # ---------- 异步处理保持不变 ----------
     if callback:
         future = ICON_EXECUTOR.submit(fetch_icon)
         future.add_done_callback(lambda f: callback(f.result()))
-        return QIcon(DEFAULT_ICON_PATH)  # 立即返回默认图标
+        return QIcon(DEFAULT_ICON_PATH)
     else:
         return fetch_icon()
 
@@ -155,6 +869,7 @@ def check_local_cache(url):
         print(f"缓存未找到: {cache_path}")
     return None
 
+
 def save_icon_to_cache(url, icon_data):
     """将图标保存到本地缓存"""
     try:
@@ -171,6 +886,7 @@ def save_icon_to_cache(url, icon_data):
     except Exception as e:
         print(f"保存图标缓存失败: {e}")
         return None
+
 
 def normalize_url(url):
     """规范化URL，添加协议等"""
@@ -264,6 +980,7 @@ def try_multiple_icon_sources(url):
 
     return None
 
+
 def get_file_icon(file_path, callback=None):
     """异步获取文件图标，带缓存功能"""
 
@@ -345,18 +1062,7 @@ def delete_icon_cache(script_data):
         print(f"删除图标缓存失败: {e}")
 
 
-def animate_search_edit_height(target_height):
-    animation = QPropertyAnimation(search_edit, b"maximumHeight")
-    animation.setDuration(3000)  # ⏳ 3秒，让动画更慢
-    animation.setStartValue(search_edit.height())
-    animation.setEndValue(target_height)
-    animation.setEasingCurve(QEasingCurve.OutCubic)  # ✅ 更加平滑的缓动曲线
-    animation.start()
-    search_edit.animation = animation  # 防止动画对象被垃圾回收
-
-
 # 获取资源文件路径（支持开发和打包环境）
-
 
 
 # 异步加载信号
@@ -385,7 +1091,7 @@ class MyDelegate(QStyledItemDelegate):
 
 def animate_search_edit_height(target_height):
     animation = QPropertyAnimation(search_edit, b"minimumHeight")
-    animation.setDuration(10)  # 动画时长 300 毫秒
+    animation.setDuration(700)  # 动画时长 300 毫秒
     animation.setStartValue(search_edit.height())
     animation.setEndValue(target_height)
     animation.start()
@@ -411,15 +1117,14 @@ def delete_script(script_list, script_name):
     return [script for script in script_list if script['name'] != script_name]
 
 
-def update_script_name(script_list, old_name, new_name):
-    """
-    更新脚本名称。
-    """
+def update_script_path(script_list, script_name, new_path, display_area):
     for script in script_list:
-        if script['name'] == old_name:
-            script['name'] = new_name
-            return True
-    return False
+        if script['name'] == script_name:
+            old_path = script['value']
+            script['value'] = new_path
+            save_scripts(script_list)
+            return True, old_path
+    return False, None
 
 
 def update_status_bar(widget_name):
@@ -433,7 +1138,8 @@ def update_status_bar(widget_name):
 def create_main_window():
     global status_bar, list_widget, search_edit, completer_model, display_area
     global create_script_button, remove_selected_button, clear_button, update_log_button
-    global english_mode, english_learn_button, original_english_btn_style
+    global english_mode, english_learn_button, original_english_btn_style, night_mode_button
+    global left_widget  # 声明为全局变量
     english_mode = False
 
     main_window = QWidget()
@@ -444,53 +1150,12 @@ def create_main_window():
     main_layout = QVBoxLayout()
     main_window.setLayout(main_layout)
 
-    # 设置图标 - 改进版本
-    icon_path = None
-    possible_icon_names = ['imge.png', 'icon.png', 'app.png', 'logo.png']  # 尝试多个可能的图标名称
-
-    for icon_name in possible_icon_names:
-        test_path = get_resource_path(icon_name)
-        if os.path.exists(test_path):
-            icon_path = test_path
-            break
-
-    if icon_path:
-        print(f"找到图标文件: {icon_path}")
-        try:
-            icon = QIcon(icon_path)
-            main_window.setWindowIcon(icon)
-        except Exception as e:
-            print(f"加载图标失败: {e}")
-            # 使用内置的默认图标
-            main_window.setWindowIcon(QIcon.fromTheme("application-x-executable"))
-    else:
-        print("警告: 未找到图标文件，使用默认图标")
-        main_window.setWindowIcon(QIcon.fromTheme("application-x-executable"))
-
-    def get_icon_path():
-        # 尝试多种可能的路径
-        possible_paths = [
-            get_resource_path('imge.png'),
-            os.path.join(os.path.dirname(__file__), 'resources', 'imge.png'),
-            'imge.png'
-        ]
-        for path in possible_paths:
-            if os.path.exists(path):
-                return path
-        return None
-
     # 设置图标
     icon_path = get_resource_path('imge.png')
-    print(f"图标路径: {icon_path}")  # 调试输出
-    print(f"文件是否存在: {os.path.exists(icon_path)}")  # 检查文件是否存在
-
-    if not os.path.exists(icon_path):
-        icon_path = "imge.png"  # 尝试当前目录
-        print(f"回退路径: {icon_path}")
-        print(f"回退路径是否存在: {os.path.exists(icon_path)}")
-
-    icon = QIcon(icon_path)
-    main_window.setWindowIcon(icon)
+    if os.path.exists(icon_path):
+        main_window.setWindowIcon(QIcon(icon_path))
+    else:
+        main_window.setWindowIcon(QIcon.fromTheme("application-x-executable"))
 
     # 添加状态栏
     status_bar = QLabel(tr(">>> 准备就绪🚀"))
@@ -540,31 +1205,67 @@ def create_main_window():
     english_learn_button.setStyleSheet(original_english_btn_style)
     english_learn_button.setFixedSize(32, 32)
 
+    # 添加夜间模式按钮（初始化为太阳图标）
+    night_mode_button = QPushButton("  ☀️  ")  # 修改为太阳图标
+    night_mode_button_style = """
+        QPushButton {
+            background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
+                                              stop:0 rgba(200, 200, 200, 1), stop:1 rgba(160, 160, 160, 1));
+            border: 1px solid #BBBBBB;
+            border-radius: 8px;
+            color: #222222;
+            font-size: 14px;
+            font-weight: bold;
+            padding: 2px 8px;
+            text-align: center;
+            margin: 0;
+            box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+        }
+        QPushButton:hover {
+            background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
+                                              stop:0 rgba(160, 160, 160, 1), stop:1 rgba(120, 120, 120, 1));
+            border: 1px solid #AAAAAA;
+        }
+        QPushButton:pressed {
+            background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
+                                              stop:0 rgba(120, 120, 120, 1), stop:1 rgba(90, 90, 90, 1));
+            border: 1px solid #999999;
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+        }
+    """
+    try:
+        night_mode_button.clicked.disconnect()
+    except Exception:
+        pass
+    night_mode_button.clicked.connect(toggle_night_mode)
+    night_mode_button.setStyleSheet(night_mode_button_style)
+    night_mode_button.setFixedSize(32, 32)
+
     # 状态栏容器
     status_container = QWidget()
     status_layout = QHBoxLayout(status_container)
     status_layout.addWidget(status_bar)
+    status_layout.addWidget(night_mode_button)
     status_layout.addWidget(english_learn_button)
     status_layout.setContentsMargins(0, 0, 0, 0)
-    status_layout.setSpacing(0)
+    status_layout.setSpacing(5)
     status_container.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
     status_container.setFixedHeight(30)
+    main_layout.addWidget(status_container)
 
-    # 其余代码保持不变...
+    # 列表控件
     list_widget = SmoothListWidget(status_bar)
     list_widget.setStyleSheet(list_widget_style)
     list_widget.itemClicked.connect(on_list_item_clicked)
     list_widget.itemDoubleClicked.connect(lambda item: execute_script(item, display_area))
-
-    # 允许拖拽排序
     list_widget.setDragDropMode(QListWidget.InternalMove)
-    list_widget.model().rowsMoved.connect(update_item_colors)  # 监听排序，确保颜色不乱
+    list_widget.model().rowsMoved.connect(update_item_colors)
     list_widget.setDefaultDropAction(Qt.MoveAction)
     list_widget.setSelectionMode(QListWidget.SingleSelection)
     list_widget.setAcceptDrops(True)
+    list_widget.model().rowsMoved.connect(save_list_order)
 
-    list_widget.model().rowsMoved.connect(save_list_order)  # 监听拖拽完成后触发
-
+    # 搜索框
     search_edit = QLineEdit()
     search_edit.setPlaceholderText(tr('🔍脚本名称/单词'))
     search_edit.setStyleSheet(search_edit_style)
@@ -575,17 +1276,20 @@ def create_main_window():
     completer.setCaseSensitivity(Qt.CaseInsensitive)
     search_edit.textChanged.connect(lambda text: filter_list_widget(list_widget, text))
 
+    # 左侧布局
     left_layout = QVBoxLayout()
     left_layout.addWidget(search_edit)
     left_layout.addWidget(list_widget)
-    left_widget = QWidget()
+    left_widget = QWidget()  # 赋值给全局变量
     left_widget.setLayout(left_layout)
     left_widget.setStyleSheet(left_widget_style)
 
+    # 显示区域
     display_area = QTextEdit()
     display_area.setReadOnly(True)
     display_area.setStyleSheet(display_area_style)
 
+    # 按钮布局
     button_layout = QHBoxLayout()
     create_script_button = create_button("🖋 创建脚本", main_window,
                                          lambda: show_create_script_dialog(main_window, list_widget, display_area,
@@ -602,6 +1306,7 @@ def create_main_window():
     update_log_button.enterEvent = lambda event: update_status_bar("📜 查看日志 / 设备信息")
     search_edit.enterEvent = lambda event: update_status_bar("🔍 搜索框")
     english_learn_button.enterEvent = lambda event: update_status_bar("💃 English_learn")
+    night_mode_button.enterEvent = lambda event: update_status_bar("🌙 夜间模式")
 
     button_layout.addStretch()
     button_layout.addWidget(create_script_button)
@@ -610,6 +1315,7 @@ def create_main_window():
     button_layout.addWidget(update_log_button)
     button_layout.addStretch()
 
+    # 分割器
     splitter = QSplitter(Qt.Horizontal)
     splitter.addWidget(left_widget)
     splitter.addWidget(display_area)
@@ -621,13 +1327,12 @@ def create_main_window():
     # 将状态栏容器添加到主布局的底部
     main_layout.addWidget(status_container)
 
+    # 加载脚本
     scripts = load_scripts()
     for index, script in enumerate(scripts):
         item = QListWidgetItem(script['name'])
         item.setData(Qt.UserRole, script)
-        # 先设置默认图标
         item.setIcon(QIcon(DEFAULT_ICON_PATH))
-        # 根据索引号设置颜色
         if index % 2 == 0:
             item.setBackground(QColor("#F0F0F0"))
         else:
@@ -635,8 +1340,6 @@ def create_main_window():
         list_widget.addItem(item)
         completer_model.insertRow(0)
         completer_model.setData(completer_model.index(0), script['name'])
-
-        # 异步加载实际图标
         if script['type'] == 'url':
             get_website_favicon(script['value'], lambda icon, i=index: list_widget.item(i).setIcon(icon))
         elif script['type'] == 'file':
@@ -646,52 +1349,8 @@ def create_main_window():
     setup_context_menu(list_widget, display_area)
     # 显示欢迎界面
     display_welcome_screen(display_area)
-    update_item_colors()  # 确保软件启动时颜色正确
+    update_item_colors()
     return main_window
-
-
-def animate_button_scale(button):
-    """按钮点击时的可爱缩放动画"""
-    from PyQt5.QtCore import QSequentialAnimationGroup, QPropertyAnimation, QEasingCurve, QRect
-
-    # 缩放动画
-    scale_anim = QPropertyAnimation(button, b"geometry")
-    scale_anim.setDuration(150)  # 更快，150ms
-    original_geometry = button.geometry()
-    scale_factor = 1.15  # 放大到 1.15 倍
-    scaled_geometry = QRect(
-        original_geometry.x() - int(original_geometry.width() * (scale_factor - 1) / 2),
-        original_geometry.y() - int(original_geometry.height() * (scale_factor - 1) / 2),
-        int(original_geometry.width() * scale_factor),
-        int(original_geometry.height() * scale_factor)
-    )
-    scale_anim.setStartValue(original_geometry)
-    scale_anim.setEndValue(scaled_geometry)
-    scale_anim.setEasingCurve(QEasingCurve.OutElastic)  # 弹性跳跃
-
-    # 回缩动画
-    shrink_anim = QPropertyAnimation(button, b"geometry")
-    shrink_anim.setDuration(100)  # 100ms 回缩
-    shrink_anim.setStartValue(scaled_geometry)
-    shrink_anim.setEndValue(original_geometry)
-    shrink_anim.setEasingCurve(QEasingCurve.InOutQuad)
-
-    # 旋转动画（轻微抖动）
-    rotate_anim = QPropertyAnimation(button, b"rotation", button)
-    rotate_anim.setDuration(250)  # 与总时长接近
-    rotate_anim.setStartValue(0)
-    rotate_anim.setKeyValueAt(0.5, 5)  # 中间旋转 5 度
-    rotate_anim.setEndValue(0)
-    rotate_anim.setEasingCurve(QEasingCurve.OutBounce)  # 弹跳效果
-
-    # 并行运行缩放和旋转
-    from PyQt5.QtCore import QParallelAnimationGroup
-    anim_group = QParallelAnimationGroup()
-    anim_group.addAnimation(scale_anim)
-    anim_group.addAnimation(shrink_anim)
-    anim_group.addAnimation(rotate_anim)
-    anim_group.start()
-    return anim_group  # 保存引用防止回收
 
 
 def toggle_english_mode():
@@ -711,9 +1370,9 @@ def toggle_english_mode():
             pass
         search_edit.textChanged.connect(english_search_text_changed)
 
-        # 使用动画调整高度
-        animate_search_edit_height(190)
-
+        # 新增：清空搜索框内容
+        search_edit.clear()
+        animate_search_edit_height(250)
         appendLogWithEffect(display_area, """🔴已开启单词查询模式
 ███████╗███╗   ██╗ ██████╗ ██╗     ██╗███████╗██╗  ██╗
 ██╔════╝████╗  ██║██╔════╝ ██║     ██║██╔════╝██║  ██║
@@ -738,7 +1397,9 @@ def toggle_english_mode():
             pass
         search_edit.textChanged.connect(original_search_handler)
 
-        # 使用动画恢复高度
+        # 新增：清空搜索框内容
+        search_edit.clear()
+
         animate_search_edit_height(40)
         appendLogWithEffect(display_area, """🔵已退出单词查询模式
 ███████╗██╗  ██╗██╗████████╗
@@ -749,6 +1410,163 @@ def toggle_english_mode():
 ╚══════╝╚═╝  ╚═╝╚═╝   ╚═╝    
 """)
         status_bar.setText(">>> 准备就绪🚀")
+
+
+def toggle_night_mode():
+    global night_mode, main_window, english_learn_button, night_mode_button, status_bar
+    global list_widget, search_edit, display_area, create_script_button, remove_selected_button, clear_button, update_log_button
+    global original_english_btn_style, left_widget, display_area_style_night
+    global list_widget_style_night, search_edit_style_night, main_window_style_night, left_widget_style_night, button_style_night
+
+    # 定义夜间模式按钮的默认样式
+    night_mode_button_style = """
+        QPushButton {
+            background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
+                                              stop:0 rgba(200, 200, 200, 1), stop:1 rgba(160, 160, 160, 1));
+            border: 1px solid #BBBBBB;
+            border-radius: 8px;
+            color: #222222;
+            font-size: 14px;
+            font-weight: bold;
+            padding: 2px 8px;
+            text-align: center;
+            margin: 0;
+            box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+        }
+        QPushButton:hover {
+            background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
+                                              stop:0 rgba(160, 160, 160, 1), stop:1 rgba(120, 120, 120, 1));
+            border: 1px solid #AAAAAA;
+        }
+        QPushButton:pressed {
+            background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
+                                              stop:0 rgba(120, 120, 120, 1), stop:1 rgba(90, 90, 90, 1));
+            border: 1px solid #999999;
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+        }
+    """
+
+    if not night_mode:
+        night_mode = True
+        # 保存当前搜索框的高度
+        search_height = search_edit.height()
+
+        # 设置夜间模式主窗口样式，确保覆盖所有部件
+
+        main_window.setStyleSheet("""
+            QMainWindow, QWidget {
+                background-color: #000000;  /* 纯黑背景 */
+                color: #FFFFFF;
+            }
+            QSplitter {
+                background-color: #000000;  /* 分割器背景 */
+            }
+            QSplitter::handle {
+                background-color: #000000;  /* 分割器手柄背景 */
+            }
+            QMessageBox {
+                background-color: #222222;
+                color: #FFFFFF;
+                border: 2px solid #0078d7;
+                border-radius: 15px;
+                padding: 20px;
+            }
+            QMessageBox QLabel {
+                font-size: 16px;
+                margin: 10px;
+                color: #FFFFFF;
+            }
+            QMessageBox QPushButton {
+                background-color: #0078d7;
+                color: white;
+                padding: 12px 25px;
+                border: none;
+                border-radius: 10px;
+                font-size: 16px;
+                margin: 5px 10px;
+            }
+            QMessageBox QPushButton:hover {
+                background-color: #0056b3;
+            }
+        """)
+        list_widget.setStyleSheet(list_widget_style_night)
+        search_edit.setStyleSheet(search_edit_style_night)
+        display_area.setStyleSheet(display_area_style_night)
+        left_widget.setStyleSheet(left_widget_style_night)
+        create_script_button.setStyleSheet(button_style_night)
+        remove_selected_button.setStyleSheet(button_style_night)
+        clear_button.setStyleSheet(button_style_night)
+        update_log_button.setStyleSheet(button_style_night)
+        night_mode_button.setText("  🌙  ")  # 切换为月亮图标
+        status_bar.setStyleSheet("""
+            font-size: 12px;
+            color: #EEEEEE;
+            padding: 2px 8px;
+            border-top: 1px solid #555555;
+            background-color: #000000;  /* 与夜间模式主窗口一致 */
+        """)
+    else:
+        night_mode = False
+        main_window.setStyleSheet(main_window_style)
+        list_widget.setStyleSheet(list_widget_style)
+        search_edit.setStyleSheet(search_edit_style)
+        display_area.setStyleSheet(display_area_style)
+        left_widget.setStyleSheet(left_widget_style)
+        create_script_button.setStyleSheet(button_style)
+        remove_selected_button.setStyleSheet(button_style)
+        clear_button.setStyleSheet(button_style)
+        update_log_button.setStyleSheet(button_style)
+        night_mode_button.setText("  ☀️  ")  # 切换回太阳图标
+        status_bar.setStyleSheet("""
+            font-size: 12px;
+            color: #444444;
+            padding: 2px 8px;
+            border-top: 1px solid #CCCCCC;
+            background-color: #F0F2F5;  /* 与日间模式主窗口一致 */
+        """)
+        # 恢复搜索框高度
+        animate_search_edit_height(50 if not english_mode else 250)
+
+        # 恢复窗口标题栏颜色（仅适用于 Windows）
+        if sys.platform == "win32":
+            try:
+                import ctypes
+                ctypes.windll.dwmapi.DwmSetWindowAttribute(
+                    int(main_window.winId()),
+                    20,  # DWMWA_CAPTION_COLOR
+                    ctypes.byref(ctypes.c_int(-1)),  # 恢复默认
+                    ctypes.sizeof(ctypes.c_int)
+                )
+            except Exception as e:
+                print(f"恢复标题栏颜色失败: {e}")
+
+    night_mode_button.setStyleSheet(night_mode_button_style)
+
+
+def query_local_dictionary(word, top_n=5):
+    word_file = ensure_word_file()
+    if not word_file:
+        return []
+
+    try:
+        with open(word_file, 'r', encoding='utf-8') as f:
+            word_dict = {}
+            for line in f:
+                parts = line.strip().split(maxsplit=1)  # 只分割第一个空格
+                if len(parts) == 2:
+                    word_dict[parts[0].lower()] = parts[1]
+
+            # 简单模糊匹配
+            matches = [{'word': w, 'translation': t}
+                       for w, t in word_dict.items()
+                       if word.lower() in w]
+
+            # 按单词长度排序（更短的匹配更准确）
+            matches.sort(key=lambda x: len(x['word']))
+            return matches[:top_n]
+    except Exception as e:
+        print(f"查询单词错误: {e}")
+        return []
 
 
 def english_search_text_changed(text):
@@ -766,7 +1584,7 @@ def english_search_text_changed(text):
             for idx, item in enumerate(results):
                 # 将第一个结果（最相似）高亮显示
                 if idx == 0:
-                    line = f"<span style='background-color: yellow; font-weight: bold;'>🔤 {item['word']} | 📖 {item['translation']}</span>"
+                    line = f"<span style=' font-weight: bold;'>🔤 {item['word']} | 📖 {item['translation']}</span>"
                 else:
                     line = f"🔤 {item['word']} | 📖 {item['translation']}"
                 html_lines.append(line)
@@ -1039,252 +1857,6 @@ def display_welcome_screen(display_area):
     appendLogWithEffect(display_area, welcome_message, include_timestamp=False)
 
 
-display_area_style = """
-    QTextEdit {
-        border: 1px solid #CCCCCC;
-        border-radius: 8px;
-        background-color: #F9F9F9;
-        font-family: 'Courier New', monospace;
-        font-size: 14px;
-        color: #111111;
-        padding: 10px;
-    }
-    QScrollBar:vertical, QScrollBar:horizontal {
-        border: none;
-        background: #F0F0F0;
-        width: 10px;
-        height: 10px;
-        margin: 0px;  /* 解决错位问题 */
-        border-radius: 5px;
-    }
-    QScrollBar::handle:vertical, QScrollBar::handle:horizontal {
-        background: #BBBBBB;
-        min-height: 20px;
-        min-width: 20px;
-        border-radius: 5px;
-    }
-    QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical,
-    QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
-        background: none;
-    }
-"""
-# 定义 QMessageBox 的样式表
-message_box_style = """
-QMessageBox {
-    background-color: #ffffff;  /* 设置背景颜色为白色 */
-    color: #333333;  /* 设置文本颜色 */
-    border: 2px solid #0078d7;  /* 设置边框颜色和宽度 */
-    border-radius: 15px;  /* 设置消息框整体的圆角半径 */
-    padding: 20px;  /* 设置消息框内边距 */
-}
-QMessageBox QLabel {
-    font-size: 16px;  /* 设置文本字体大小 */
-    margin: 10px;  /* 设置标签外边距 */
-}
-QMessageBox QPushButton {
-    background-color: #0078d7;  /* 设置按钮背景颜色 */
-    color: white;  /* 设置按钮文本颜色 */
-    padding: 12px 25px;  /* 设置按钮内边距 */
-    border: none;  /* 去除按钮边框 */
-    border-radius: 10px;  /* 设置按钮的圆角半径 */
-    font-size: 16px;  /* 设置按钮文本字体大小 */
-    margin: 5px 10px;  /* 设置按钮外边距 */
-}
-QMessageBox QPushButton:hover {
-    background-color: #0056b3;  /* 设置按钮悬停时的背景颜色 */
-}
-"""
-
-list_widget_style = """
-    QListWidget {
-    border: 1px solid #CCCCCC;
-    border-radius: 8px;
-    background-color: #FFFFFF;
-    font-size: 14px;
-    color: #444444;
-    /* 继承滚动条样式 */
-    }
-    QListWidget::item {
-        padding: 10px;
-        white-space: nowrap;  /* 防止文本换行 */
-    }
-    QListWidget::item:hover {
-        background-color: #C0C0C0;
-        border-radius: 8px;
-    }
-    QListWidget::item:selected {
-        background-color: #A0A0A0;
-        color: #000000;
-        font-weight: bold;
-    }
-    QListWidget::item:focus {
-        outline: none;
-    }
-    QListWidget:focus {
-        outline: none;
-    }
-"""
-
-button_style = """
-    QPushButton {
-        background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
-                                          stop:0 rgba(180, 180, 180, 1), stop:1 rgba(140, 140, 140, 1));
-        border: 1px solid #BBBBBB;
-        border-radius: 8px;
-        color: #000000;  /* 更黑亮的文本颜色 */
-        font-weight: bold;  /* 加粗字体 */
-        padding: 3px 12px;
-        min-height: 22px;
-        max-height: 22px;
-        font-size: 16px;
-        font-weight: bold;
-        padding: 12px 24px;
-        text-align: center;
-        text-decoration: none;
-        margin: 4px 2px;
-        box-shadow: 3px 3px 5px rgba(0, 0, 0, 0.1);
-    }
-
-    QPushButton:hover {
-        background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
-                                          stop:0 rgba(140, 140, 140, 1), stop:1 rgba(100, 100, 100, 1));
-        border: 1px solid #AAAAAA;
-    }
-
-    QPushButton:pressed {
-        background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
-                                          stop:0 rgba(100, 100, 100, 1), stop:1 rgba(80, 80, 80, 1));
-        border: 1px solid #999999;
-        box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
-    }
-"""
-
-dialog_style = """
-QDialog {
-    background-color: #ffffff;  /* 白色背景 */
-
-    border-radius: 15px;  /* 圆角 */
-    padding: 30px;  /* 内边距 */
-}
-QLabel {
-    font-size: 20px;  /* 标签字体大小 */
-    color: #333333;  /* 标签字体颜色 */
-    margin-bottom: 10px;  /* 标签底部外边距 */
-}
-QPushButton {
-    background-color: #0078d7;  /* 按钮背景颜色 */
-    color: white;  /* 按钮字体颜色 */
-    padding: 12px 25px;  /* 按钮内边距 */
-    border: none;  /* 无边框 */
-    border-radius: 10px;  /* 按钮圆角 */
-    font-size: 16px;  /* 按钮字体大小 */
-    margin: 5px 0;  /* 按钮外边距 */
-}
-QPushButton:hover {
-    background-color: #0056b3;  /* 按钮悬停背景颜色 */
-}
-"""
-
-search_edit_style = """
-    QLineEdit {
-        border: 1px solid #CCCCCC;
-        border-radius: 8px;
-        padding: 10px;
-        font-size: 20px;  /* 增大字体 */
-        min-width: 100px;  /* 设置最小宽度 */
-        height: 50px;  /* ✅ 增加搜索框高度 */
-        background-color: #FFFFFF;
-        color: #444444;
-    }
-"""
-
-completer_popup_style = """
-    QListView {
-        font-size: 18px;  /* 调整字体大小 */
-        padding: 8px;
-        min-width: 300px;  /* 增加最小宽度 */
-        min-height: 250px;  /* ✅ 增加预览框的最小高度 */
-    }
-"""
-
-main_window_style = """
-    QMainWindow {
-        background-color: #F0F2F5;
-    }
-    QWidget {
-        background-color: #F5F7FA;
-    }
-"""
-
-left_widget_style = """
-    QWidget {
-        background-color: #F0F2F5;  /* 浅蓝色背景 */
-        border-radius: 8px;  /* 圆角 */
-    }
-    QScrollBar:vertical {
-        border: none;
-        background: #F0F0F0;
-        width: 10px;
-        margin: 0px;
-        border-radius: 5px;
-    }
-    QScrollBar::handle:vertical {
-        background: #BBBBBB;
-        min-height: 20px;
-        border-radius: 5px;
-    }
-    QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
-        background: none;
-    }
-    QScrollBar:horizontal {
-        border: none;
-        background: #F0F0F0;
-        height: 10px;
-        margin: 0px;
-        border-radius: 5px;
-    }
-    QScrollBar::handle:horizontal {
-        background: #BBBBBB;
-        min-width: 20px;
-        border-radius: 5px; 
-    }
-    QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
-        background: none;
-    }
-
-"""
-
-button_style = """
-    QPushButton {
-        background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
-                                          stop:0 rgba(180, 180, 180, 1), stop:1 rgba(140, 140, 140, 1));
-        border: 1px solid #BBBBBB;
-        border-radius: 8px;
-        color: #000000;  /* 更黑亮的文本颜色 */
-        font-size: 16px;
-        font-weight: bold;
-        padding: 12px 25px;
-        text-align: center;
-        text-decoration: none;
-        margin: 4px 2px;
-        box-shadow: 3px 3px 5px rgba(0, 0, 0, 0.1);
-    }
-
-    QPushButton:hover {
-        background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
-                                          stop:0 rgba(140, 140, 140, 1), stop:1 rgba(100, 100, 100, 1));
-        border: 1px solid #AAAAAA;
-    }
-
-    QPushButton:pressed {
-        background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
-                                          stop:0 rgba(100, 100, 100, 1), stop:1 rgba(80, 80, 80, 1));
-        border: 1px solid #999999;
-        box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
-    }
-"""
-
-
 def get_user_input_file(parent):
     """获取用户输入的软件路径和脚本名称（与主窗口风格一致）"""
     dialog = QDialog(parent)
@@ -1292,6 +1864,10 @@ def get_user_input_file(parent):
     dialog.setWindowTitle("创建软件脚本")
     dialog.setFixedSize(420, 300)
     dialog.setStyleSheet("""
+        QWidget {
+            background-color: #F5F7FA;
+            border-radius: 12px;
+        }
         QDialog {
             background-color: #F5F7FA;
             border-radius: 12px;
@@ -1552,6 +2128,10 @@ def get_user_input_url(parent):
     dialog.setWindowTitle("创建网页脚本")
     dialog.setFixedSize(420, 300)
     dialog.setStyleSheet("""
+        QWidget {
+            background-color: #F5F7FA;
+            border-radius: 12px;
+        }
         QDialog {
             background-color: #F5F7FA;
             border-radius: 12px;
@@ -1689,6 +2269,196 @@ def return_to_parent(parent, dialog):
         parent.show()  # 显示父窗口
 
 
+class RenameScriptDialog(QDialog):
+    def __init__(self, parent=None, old_name=""):
+        super().__init__(parent)
+        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
+        self.setWindowTitle(tr("重命名脚本"))
+        self.setFixedSize(400, 200)
+        self.old_name = old_name
+        self.init_ui()
+
+        # 设置窗口图标
+        icon_path = get_resource_path('imge.png')
+        if os.path.exists(icon_path):
+            self.setWindowIcon(QIcon(icon_path))
+
+    def init_ui(self):
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(20)
+
+        # 提示标签
+        label = QLabel(tr("请输入新的脚本名称:"))
+        label.setAlignment(Qt.AlignCenter)
+        layout.addWidget(label)
+
+        # 输入框
+        self.name_edit = QLineEdit()
+        self.name_edit.setText(self.old_name)
+        self.name_edit.setPlaceholderText(tr("请输入新名称"))
+        self.name_edit.setMinimumWidth(300)
+        layout.addWidget(self.name_edit)
+
+        # 按钮区域
+        button_layout = QHBoxLayout()
+        ok_button = QPushButton(tr("✔ 确定"))
+        cancel_button = QPushButton(tr("✖ 取消"))
+        ok_button.clicked.connect(self.accept)
+        cancel_button.clicked.connect(self.reject)
+        button_layout.addStretch()
+        button_layout.addWidget(ok_button)
+        button_layout.addWidget(cancel_button)
+        button_layout.addStretch()
+        layout.addLayout(button_layout)
+
+        # 应用样式
+        self.setStyleSheet("""
+                QDialog {
+                    background-color: #F5F7FA;
+                    border-radius: 12px;
+                    border: 1px solid #D0D0D0;
+                }
+                QPushButton {
+                    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
+                                                    stop:0 rgba(180, 180, 180, 1), stop:1 rgba(140, 140, 140, 1));
+                    border: 1px solid #BBBBBB;
+                    border-radius: 8px;
+                    color: #000000;
+                    font-size: 16px;
+                    font-weight: bold;
+                    padding: 12px 24px;
+                    text-align: center;
+                    text-decoration: none;
+                    margin: 4px 2px;
+                    box-shadow: 3px 3px 5px rgba(0, 0, 0, 0.1);
+                }
+                QPushButton:hover {
+                    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
+                                                    stop:0 rgba(140, 140, 140, 1), stop:1 rgba(100, 100, 100, 1));
+                    border: 1px solid #AAAAAA;
+                }
+                QPushButton:pressed {
+                    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
+                                                    stop:0 rgba(100, 100, 100, 1), stop:1 rgba(80, 80, 80, 1));
+                    border: 1px solid #999999;
+                    box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+                }
+            """)
+
+    def get_new_name(self):
+        return self.name_edit.text().strip()
+
+
+class ModifyPathDialog(QDialog):
+    def __init__(self, parent=None, script_type="", current_path=""):
+        super().__init__(parent)
+        self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
+        self.script_type = script_type
+        self.current_path = current_path
+        self.setWindowTitle(tr("修改路径") if script_type == 'file' else tr("修改网址"))
+        self.setFixedSize(500, 250)
+        self.init_ui()
+
+        # 设置窗口图标
+        icon_path = get_resource_path('imge.png')
+        if os.path.exists(icon_path):
+            self.setWindowIcon(QIcon(icon_path))
+
+    def init_ui(self):
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(20)
+
+        # 提示标签
+        label_text = tr("请输入新的文件路径:") if self.script_type == 'file' else tr("请输入新的网址:")
+        label = QLabel(label_text)
+        label.setAlignment(Qt.AlignCenter)
+        layout.addWidget(label)
+
+        # 输入框
+        self.path_edit = QLineEdit()
+        self.path_edit.setText(self.current_path)
+        self.path_edit.setPlaceholderText(tr("选择文件路径") if self.script_type == 'file' else tr("输入网址"))
+        self.path_edit.setMinimumWidth(400)
+        layout.addWidget(self.path_edit)
+
+        # 文件选择按钮（仅文件类型）
+        if self.script_type == 'file':
+            browse_button = QPushButton(tr("📂 浏览"))
+            browse_button.clicked.connect(self.browse_file)
+            layout.addWidget(browse_button, alignment=Qt.AlignCenter)
+
+        # 按钮区域
+        button_layout = QHBoxLayout()
+        ok_button = QPushButton(tr("✔ 确定"))
+        cancel_button = QPushButton(tr("✖ 取消"))
+        ok_button.clicked.connect(self.accept)
+        cancel_button.clicked.connect(self.reject)
+        button_layout.addStretch()
+        button_layout.addWidget(ok_button)
+        button_layout.addWidget(cancel_button)
+        button_layout.addStretch()
+        layout.addLayout(button_layout)
+
+        # 应用样式
+        self.setStyleSheet("""
+                QDialog {
+                    background-color: #F5F7FA;
+                    border-radius: 12px;
+                    border: 1px solid #D0D0D0;
+                    font-family: 'Microsoft YaHei', Arial, sans-serif;
+                }
+                QLabel {
+                    font-size: 16px;
+                    color: #333333;
+                }
+                QLineEdit {
+                    border: 1px solid #BBBBBB;
+                    border-radius: 8px;
+                    padding: 8px 12px;
+                    font-size: 14px;
+                    background-color: #FFFFFF;
+                    min-height: 36px;
+                }
+                QLineEdit:focus {
+                    border: 1px solid #BBBBBB;
+                    box-shadow: 0 0 4px rgba(187, 187, 187, 0.5);
+                }
+                QPushButton {
+                    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
+                                                    stop:0 rgba(180, 180, 180, 1), stop:1 rgba(140, 140, 140, 1));
+                    border: 1px solid #BBBBBB;
+                    border-radius: 8px;
+                    color: #000000;
+                    font-size: 14px;
+                    font-weight: bold;
+                    padding: 10px 20px;
+                    min-width: 100px;
+                }
+                QPushButton:hover {
+                    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
+                                                    stop:0 rgba(140, 140, 140, 1), stop:1 rgba(100, 100, 100, 1));
+                    border: 1px solid #AAAAAA;
+                }
+                QPushButton:pressed {
+                    background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
+                                                    stop:0 rgba(100, 100, 100, 1), stop:1 rgba(80, 80, 80, 1));
+                    border: 1px solid #999999;
+                }
+            """)
+
+    def browse_file(self):
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, tr("选择文件"), os.path.dirname(self.current_path), tr("所有文件 (*)")
+        )
+        if file_path:
+            self.path_edit.setText(file_path)
+
+    def get_new_path(self):
+        return self.path_edit.text().strip()
+
+
 class MergeScriptNameDialog(QDialog):
     """自定义合并脚本命名对话框"""
 
@@ -1698,60 +2468,7 @@ class MergeScriptNameDialog(QDialog):
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
         self.setWindowTitle("命名合并脚本")
         self.setFixedSize(500, 300)
-        self.setStyleSheet("""
-            QDialog {
-                background-color: #F5F7FA;
-                border-radius: 12px;
-                border: 1px solid #D0D0D0;
-                font-family: 'Microsoft YaHei', Arial, sans-serif;
-            }
-            QLabel {
-                font-size: 16px;
-                color: #333333;
-                padding: 4px;
-            }
-            QLineEdit {
-                border: 1px solid #BBBBBB;
-                border-radius: 8px;
-                padding: 8px 12px;
-                font-size: 14px;
-                background-color: #FFFFFF;
-                min-height: 36px;
-                selection-background-color: #A0A0A0;
-                box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
-            }
-            QLineEdit:focus {
-                border: 1px solid #BBBBBB;
-                box-shadow: 0 0 4px rgba(187, 187, 187, 0.5);
-            }
-            QPushButton {
-                background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
-                                                stop:0 rgba(180, 180, 180, 1), 
-                                                stop:1 rgba(140, 140, 140, 1));
-                border: 1px solid #BBBBBB;
-                border-radius: 8px;
-                color: #000000;
-                font-size: 14px;
-                font-weight: bold;
-                padding: 10px 20px;
-                min-width: 100px;
-                min-height: 40px;
-                box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            }
-            QPushButton:hover {
-                background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
-                                                stop:0 rgba(140, 140, 140, 1), 
-                                                stop:1 rgba(100, 100, 100, 1));
-                border: 1px solid #AAAAAA;
-            }
-            QPushButton:pressed {
-                background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
-                                                stop:0 rgba(100, 100, 100, 1), 
-                                                stop:1 rgba(80, 80, 80, 1));
-                border: 1px solid #999999;
-                box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
-            }
-        """)
+        self.setStyleSheet(hebing_button_style)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(30, 20, 30, 20)  # 增加左右边距
@@ -1804,56 +2521,64 @@ def setup_context_menu(list_widget, display_area):
     """设置 QListWidget 的右键菜单"""
     list_widget.setContextMenuPolicy(Qt.CustomContextMenu)
 
-    def context_menu_requested(position):
-        """处理右键菜单请求"""
-        menu = QMenu(list_widget)
-
-        # 定义菜单项
-        run_action = QAction(tr("运行"), list_widget)
-        modify_name_action = QAction(tr("重命名"), list_widget)
-        modify_path_action = QAction(tr("修改路径"), list_widget)
-        delete_action = QAction(tr("删除"), list_widget)
-        merge_action = QAction(tr("合并脚本"), list_widget)
-
-        # 添加菜单项
-        menu.addAction(run_action)
-        menu.addAction(modify_name_action)
-        menu.addAction(modify_path_action)
-        menu.addAction(delete_action)
-        menu.addAction(merge_action)
-
-        # 获取当前选中的项
-        selected_item = list_widget.itemAt(position)
-        if not selected_item:
+    def context_menu_requested(pos):
+        item = list_widget.itemAt(pos)
+        if not item:
             return
 
-        # 执行菜单动作
-        action = menu.exec_(list_widget.mapToGlobal(position))
-        if action == run_action:
-            script_name = selected_item.text()
-            script_list = load_scripts()
-            script_data = next((s for s in script_list if s['name'] == script_name), None)
-            if script_data:
-                run_script(script_data, display_area)
+        script_list = load_scripts()
+        selected_item = item
+
+        # 创建右键菜单
+        menu = QMenu(list_widget)
+        menu.setStyleSheet("""
+            QMenu {
+                background-color: #F5F7FA;
+                border: 1px solid #D0D0D0;
+                border-radius: 12px;
+                padding: 5px;
+                color: #000000;
+                font-size: 14px;
+            }
+            QMenu::item {
+                padding: 8px 20px;
+                background-color: transparent;
+            }
+            QMenu::item:selected {
+                background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
+                                                stop:0 rgba(140, 140, 140, 1), 
+                                                stop:1 rgba(100, 100, 100, 1));
+                color: #FFFFFF;
+                border-radius: 8px;
+            }
+        """)
+
+        # 添加菜单项
+        execute_action = menu.addAction(tr("执行脚本"))
+        modify_name_action = menu.addAction(tr("重命名"))
+        modify_path_action = menu.addAction(tr("修改路径"))
+
+        # 显示菜单并获取用户选择
+        action = menu.exec_(list_widget.mapToGlobal(pos))
+        if action == execute_action:
+            execute_script(selected_item, display_area)
 
         elif action == modify_name_action:
             old_name = selected_item.text()
-            new_name, ok = QInputDialog.getText(
-                None, tr("重命名"), tr("请输入新的脚本名称:"), text=old_name
-            )
-            if ok and new_name and new_name != old_name:
-                script_list = load_scripts()
-                script_data = next((s for s in script_list if s['name'] == old_name), None)
-                if script_data:
-                    script_data['name'] = new_name
-                    selected_item.setText(new_name)
-                    save_current_scripts()
-                    appendLogWithEffect(display_area, f"脚本 '{old_name}' 已重命名为 '{new_name}'\n")
-                    QMessageBox.information(None, tr("成功"), tr("脚本名称已更新"))
+            dialog = RenameScriptDialog(list_widget, old_name)
+            if dialog.exec_():
+                new_name = dialog.get_new_name()
+                if new_name and new_name != old_name:
+                    script_data = next((s for s in script_list if s['name'] == old_name), None)
+                    if script_data:
+                        script_data['name'] = new_name
+                        selected_item.setText(new_name)
+                        save_current_scripts()
+                        appendLogWithEffect(display_area, f"脚本 '{old_name}' 已重命名为 '{new_name}'\n")
+                        QMessageBox.information(None, tr("成功"), tr("脚本名称已更新"))
 
         elif action == modify_path_action:
             script_name = selected_item.text()
-            script_list = load_scripts()
             script_data = next((s for s in script_list if s['name'] == script_name), None)
             if not script_data:
                 return
@@ -1862,90 +2587,54 @@ def setup_context_menu(list_widget, display_area):
             current_path = script_data.get('value', '')
 
             if script_type == 'url':
-                new_url, ok = QInputDialog.getText(
-                    None, tr("修改网址"), tr("请输入新的网址:"), text=current_path
-                )
-                if ok and new_url:
-                    success, old_path = update_script_path(script_list, script_name, new_url, display_area)
-                    if success:
-                        script_data['value'] = new_url
-                        selected_item.setData(Qt.UserRole, script_data)
-                        selected_item.setIcon(QIcon(DEFAULT_ICON_PATH))  # 先设置默认图标
-                        get_website_favicon(new_url, lambda icon: selected_item.setIcon(icon))  # 异步更新图标
-                        appendLogWithEffect(display_area, f"脚本 '{script_name}' 网址已修改: {old_path} -> {new_url}\n")
-                        QMessageBox.information(None, tr("成功"), tr("网址已更新"))
-                    else:
-                        appendLogWithEffect(display_area, f"更新脚本 '{script_name}' 网址失败\n")
+                dialog = ModifyPathDialog(list_widget, 'url', current_path)
+                if dialog.exec_():
+                    new_url = dialog.get_new_path()
+                    if new_url:
+                        success, old_path = update_script_path(script_list, script_name, new_url, display_area)
+                        if success:
+                            script_data['value'] = new_url
+                            selected_item.setData(Qt.UserRole, script_data)
+                            selected_item.setIcon(QIcon(DEFAULT_ICON_PATH))
+                            get_website_favicon(new_url, lambda icon: selected_item.setIcon(icon))
+                            appendLogWithEffect(display_area,
+                                                f"脚本 '{script_name}' 网址已修改: {old_path} -> {new_url}\n")
+                            QMessageBox.information(None, tr("成功"), tr("网址已更新"))
+                        else:
+                            appendLogWithEffect(display_area, f"更新脚本 '{script_name}' 网址失败\n")
 
             elif script_type == 'file':
-                new_path, _ = QFileDialog.getOpenFileName(
-                    None, tr("选择新路径"), os.path.dirname(current_path), tr("所有文件 (*)")
-                )
-                if new_path:
-                    success, old_path = update_script_path(script_list, script_name, new_path, display_area)
-                    if success:
-                        script_data['value'] = new_path
-                        selected_item.setData(Qt.UserRole, script_data)
-                        selected_item.setIcon(QIcon(DEFAULT_ICON_PATH))  # 先设置默认图标
-                        get_file_icon(new_path, lambda icon: selected_item.setIcon(icon))  # 异步更新图标
-                        appendLogWithEffect(display_area,
-                                            f"脚本 '{script_name}' 路径已修改: {old_path} -> {new_path}\n")
-                        QMessageBox.information(None, tr("成功"), tr("路径已更新"))
-                    else:
-                        appendLogWithEffect(display_area, f"更新脚本 '{script_name}' 路径失败\n")
+                dialog = ModifyPathDialog(list_widget, 'file', current_path)
+                if dialog.exec_():
+                    new_path = dialog.get_new_path()
+                    if new_path:
+                        success, old_path = update_script_path(script_list, script_name, new_path, display_area)
+                        if success:
+                            script_data['value'] = new_path
+                            selected_item.setData(Qt.UserRole, script_data)
+                            selected_item.setIcon(QIcon(DEFAULT_ICON_PATH))
+                            get_file_icon(new_path, lambda icon: selected_item.setIcon(icon))
+                            appendLogWithEffect(display_area,
+                                                f"脚本 '{script_name}' 路径已修改: {old_path} -> {new_path}\n")
+                            QMessageBox.information(None, tr("成功"), tr("路径已更新"))
+                        else:
+                            appendLogWithEffect(display_area, f"更新脚本 '{script_name}' 路径失败\n")
 
             elif script_type == 'merge':
-                new_scripts, ok = QInputDialog.getText(
-                    None, tr("修改合并脚本"), tr("请输入新的脚本名称列表（用逗号分隔）:"), text=current_path
-                )
-                if ok and new_scripts:
-                    success, old_path = update_script_path(script_list, script_name, new_scripts, display_area)
-                    if success:
-                        script_data['value'] = new_scripts
-                        selected_item.setData(Qt.UserRole, script_data)
-                        selected_item.setIcon(QIcon(DEFAULT_ICON_PATH))  # 合并脚本保持默认图标
-                        appendLogWithEffect(display_area,
-                                            f"合并脚本 '{script_name}' 已修改: {old_path} -> {new_scripts}\n")
-                        QMessageBox.information(None, tr("成功"), tr("合并脚本已更新"))
-                    else:
-                        appendLogWithEffect(display_area, f"更新合并脚本 '{script_name}' 失败\n")
-
-
-        elif action == delete_action:
-            script_name = selected_item.text()
-            script_data = selected_item.data(Qt.UserRole)
-            reply = QMessageBox.question(
-                None, tr("确认删除"), f"{tr('确定要删除脚本')} '{script_name}'?",
-                QMessageBox.Yes | QMessageBox.No, QMessageBox.No
-            )
-            if reply == QMessageBox.Yes:
-                # 删除图标缓存
-                delete_icon_cache(script_data)
-                row = list_widget.row(selected_item)
-                list_widget.takeItem(row)
-                script_list = load_scripts()
-                script_list[:] = [s for s in script_list if s['name'] != script_name]
-                save_current_scripts()
-                appendLogWithEffect(display_area, f"脚本 '{script_name}' 已删除\n")
-        elif action == merge_action:
-            selected_items = list_widget.selectedItems()
-            if len(selected_items) < 2:
-                QMessageBox.warning(None, tr("警告"), tr("请至少选择两个脚本进行合并"))
-                return
-            script_names = [item.text() for item in selected_items]
-            merge_name, ok = QInputDialog.getText(
-                None, tr("合并脚本"), tr("请输入合并后的脚本名称:")
-            )
-            if ok and merge_name:
-                script_list = load_scripts()
-                item = QListWidgetItem(merge_name)
-                item.setData(Qt.UserRole, {'type': 'merge', 'value': ','.join(script_names), 'name': merge_name})
-                item.setIcon(QIcon(DEFAULT_ICON_PATH))  # 合并脚本使用默认图标
-                list_widget.addItem(item)
-                script_list.append({'type': 'merge', 'value': ','.join(script_names), 'name': merge_name})
-                save_current_scripts()
-                update_item_colors()
-                appendLogWithEffect(display_area, f"合并脚本 '{merge_name}' 创建成功，包含: {', '.join(script_names)}\n")
+                dialog = ModifyPathDialog(list_widget, 'merge', current_path)
+                if dialog.exec_():
+                    new_scripts = dialog.get_new_path()
+                    if new_scripts:
+                        success, old_path = update_script_path(script_list, script_name, new_scripts, display_area)
+                        if success:
+                            script_data['value'] = new_scripts
+                            selected_item.setData(Qt.UserRole, script_data)
+                            selected_item.setIcon(QIcon(DEFAULT_ICON_PATH))
+                            appendLogWithEffect(display_area,
+                                                f"合并脚本 '{script_name}' 已修改: {old_path} -> {new_scripts}\n")
+                            QMessageBox.information(None, tr("成功"), tr("合并脚本已更新"))
+                        else:
+                            appendLogWithEffect(display_area, f"更新合并脚本 '{script_name}' 失败\n")
 
     list_widget.customContextMenuRequested.connect(context_menu_requested)
 
@@ -2001,51 +2690,83 @@ class MergeScriptSelectionDialog(QDialog):
 
         # 继承主窗口样式
         self.setStyleSheet("""
-                /* === 主窗口样式 === */
-                QDialog {
-                    background-color: #F5F7FA;
-                    border-radius: 12px;
-                    border: 1px solid #D0D0D0;
-                }
-
-                /* === 滚动条样式（与主窗口一致）=== */
-                QScrollBar:vertical, QScrollBar:horizontal {
-                    border: none;
-                    background: #F0F0F0;
-                    width: 10px;
-                    height: 10px;
-                    margin: 0px;
-                    border-radius: 5px;
-                }
-                QScrollBar::handle:vertical, QScrollBar::handle:horizontal {
-                    background: #BBBBBB;
-                    min-height: 20px;
-                    min-width: 20px;
-                    border-radius: 5px;
-                }
-                QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical,
-                QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
-                    background: none;
-                }
-
-                /* === 列表控件样式 === */
-                QListWidget {
-                    outline: 0;
-                    border: 1px solid #CCCCCC;
-                    border-radius: 6px;
-                    background-color: #FFFFFF;
-                    font-size: 12px;
-                }
-                QListWidget::item {
-                    padding: 6px;
-                    border-bottom: 1px solid #EEEEEE;
-                }
-                QListWidget::item:selected {
-                    background-color: #D0D0D0;
-                    color: #000000;
-                }
-
-            """)
+            /* === 主窗口和容器样式 === */
+            QDialog, QWidget, QFrame {
+                background-color: #F5F7FA;
+            }
+            QDialog {
+                border-radius: 12px;
+                border: 1px solid #D0D0D0;
+                font-family: 'Microsoft YaHei', Arial, sans-serif;
+            }
+            /* === 标签样式 === */
+            QLabel {
+                font-size: 14px;
+                color: #000000;
+                padding: 4px;
+                background-color: transparent;
+            }
+            /* === 输入框样式 === */
+            QLineEdit {
+                background-color: #FFFFFF;
+                border: 1px solid #CCCCCC;
+                border-radius: 6px;
+                padding: 6px;
+                font-size: 14px;
+                color: #000000;
+            }
+            /* === 按钮样式 === */
+            QPushButton {
+                background-color: #D0D0D0;
+                border: 1px solid #BBBBBB;
+                border-radius: 6px;
+                padding: 8px;
+                font-size: 14px;
+                color: #000000;
+            }
+            QPushButton:hover {
+                background-color: #BBBBBB;
+            }
+            QPushButton:pressed {
+                background-color: #AAAAAA;
+            }
+            /* === 滚动条样式 === */
+            QScrollBar:vertical, QScrollBar:horizontal {
+                border: none;
+                background: #F5F7FA;
+                width: 10px;
+                height: 10px;
+                margin: 0px;
+                border-radius: 5px;
+            }
+            QScrollBar::handle:vertical, QScrollBar::handle:horizontal {
+                background: #BBBBBB;
+                min-height: 20px;
+                min-width: 20px;
+                border-radius: 5px;
+            }
+            QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical,
+            QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+                background: none;
+            }
+            /* === 列表控件样式 === */
+            QListWidget {
+                outline: 0;
+                border: 1px solid #CCCCCC;
+                border-radius: 6px;
+                background-color: #FFFFFF;
+                font-size: 12px;
+                color: #000000;
+            }
+            QListWidget::item {
+                padding: 6px;
+                border-bottom: 1px solid #EEEEEE;
+            }
+            QListWidget::item:selected {
+                background-color: #D0D0D0;
+                color: #000000;
+            }
+        """)
 
         self.existing_scripts = existing_scripts or []
         self.display_area = display_area
@@ -2065,6 +2786,12 @@ class MergeScriptSelectionDialog(QDialog):
 
         # ---- 可用脚本列表 ----
         available_group = QGroupBox("可用脚本 （双击添加）")
+        available_group.setStyleSheet("""
+            QGroupBox {
+                color: black;  /* 设置字体颜色为红色 */
+                font: bold 12px;  /* 可选：设置字体大小和粗细 */
+            }
+        """)
         available_group.setObjectName("AvailableGroup")
         self.available_list = QListWidget()
         self.available_list.setObjectName("AvailableList")
@@ -2075,6 +2802,12 @@ class MergeScriptSelectionDialog(QDialog):
 
         # ---- 已选脚本列表 ----
         selected_group = QGroupBox("已选脚本 （拖动排序）")
+        selected_group.setStyleSheet("""
+            QGroupBox {
+                color: black;  /* 设置字体颜色为红色 */
+                font: bold 12px;  /* 可选：设置字体大小和粗细 */
+            }
+        """)
         selected_group.setObjectName("SelectedGroup")
         self.selected_list = QListWidget()
         self.selected_list.setObjectName("SelectedList")
@@ -2124,6 +2857,12 @@ class MergeScriptSelectionDialog(QDialog):
 
         # === 预览区域 ===
         preview_group = QGroupBox("执行顺序预览")
+        preview_group.setStyleSheet("""
+            QGroupBox {
+                color: black;  /* 设置字体颜色为红色 */
+                font: bold 12px;  /* 可选：设置字体大小和粗细 */
+            }
+        """)
         preview_group.setObjectName("PreviewGroup")
         self.preview = QTextEdit()
         self.preview.setObjectName("PreviewText")
@@ -2290,6 +3029,7 @@ class MergeScriptSelectionDialog(QDialog):
 
         if self.selected_list.count() == 0:
             self.preview.setPlainText("当前没有选择任何脚本")
+            self.preview.setStyleSheet("color: red;")  # 设置文本颜色为红色
             return
 
         # 列配置（列名，宽度，对齐方式）
@@ -2341,6 +3081,7 @@ class MergeScriptSelectionDialog(QDialog):
             for i in range(self.selected_list.count())
         ]
 
+
 class FastScrollDelegate(QStyledItemDelegate):
     def __init__(self, parent):
         super().__init__(parent)
@@ -2354,82 +3095,6 @@ class FastScrollDelegate(QStyledItemDelegate):
             'hover': QColor("#C0C0C0")
         }
 
-    def paint(self, painter, option, index):
-        painter.save()
-
-        item = self.list.itemFromIndex(index)
-        if not item:
-            return super().paint(painter, option, index)
-
-        # 获取脚本类型
-        script_data = item.data(Qt.UserRole)
-        is_merge_script = script_data and script_data.get('type') == 'merge'
-
-        # ===== 1. 智能背景绘制 =====
-        bg_rect = option.rect
-        state = option.state
-
-        if state & QStyle.State_Selected:
-            bg_color = self.color_map['selected']
-        elif state & QStyle.State_MouseOver:
-            bg_color = self.color_map['hover']
-        else:
-            bg_color = self.color_map['even'] if index.row() % 2 == 0 else self.color_map['odd']
-
-        painter.fillRect(bg_rect, bg_color)
-
-        # ===== 2. 高性能图标渲染 =====
-        icon = item.icon()
-        if not icon.isNull():
-            # 精确定位（左侧5px，垂直居中16x16）
-            icon_rect = QRect(
-                bg_rect.left() + 5,
-                bg_rect.top() + (bg_rect.height() - 16) // 2,
-                16, 16
-            )
-            # 启用抗锯齿和高质量渲染
-            painter.setRenderHints(QPainter.Antialiasing | QPainter.SmoothPixmapTransform)
-            icon.paint(painter, icon_rect)
-
-        # ===== 3. 文本处理 =====
-        text = item.text()
-        fm = QFontMetrics(option.font)
-
-        # 文本区域计算（图标右侧25px开始）
-        text_rect = QRect(bg_rect)
-        text_rect.setLeft(bg_rect.left() + 25)
-        text_rect.setWidth(bg_rect.width() - 30)
-
-        # 智能颜色选择
-        text_color = QColor("#000000")
-        if state & QStyle.State_Selected:
-            text_color = QColor("#FFFFFF")
-
-        painter.setPen(text_color)
-
-        # 如果是合并脚本，不应用滑动效果
-        if is_merge_script:
-            # 静态文本绘制
-            painter.drawText(text_rect, Qt.AlignLeft | Qt.AlignVCenter, text)
-        else:
-            # 获取滚动数据
-            scroll_data = item.data(Qt.UserRole + 1)
-            text_width = fm.horizontalAdvance(text)
-
-            if text_width > text_rect.width() and scroll_data:
-                # 启用滑动绘制（带裁剪区域）
-                painter.setClipRect(text_rect)
-                scroll_rect = QRect(text_rect)
-                scroll_rect.setLeft(text_rect.left() - scroll_data[0])
-
-                # 优化绘制性能
-                painter.drawText(scroll_rect, Qt.AlignLeft | Qt.AlignVCenter, text)
-            else:
-                # 静态文本绘制
-                painter.drawText(text_rect, Qt.AlignLeft | Qt.AlignVCenter, text)
-
-        painter.restore()
-
 
 class CreateScriptDialog(QDialog):
     def __init__(self, parent=None, list_widget=None, display_area=None, completer_model=None):
@@ -2439,11 +3104,27 @@ class CreateScriptDialog(QDialog):
 
         self.setWindowTitle("创建脚本")
         self.setFixedSize(420, 300)
+        # 显式设置日间模式样式，防止继承夜间模式
         self.setStyleSheet("""
             QDialog {
                 background-color: #F5F7FA;
                 border-radius: 12px;
                 border: 1px solid #D0D0D0;
+                color: #000000;  /* 添加默认字体色 */
+                font-family: 'Microsoft YaHei', Arial, sans-serif;
+            }
+            QLabel {
+                color: #000000;  /* 标签字体色 */
+                font-size: 14px;
+                padding: 4px;
+            }
+            QLineEdit {
+                background-color: #FFFFFF;  /* 区分输入区域 */
+                border: 1px solid #BBBBBB;
+                border-radius: 8px;
+                padding: 8px 12px;
+                font-size: 14px;
+                color: #000000;  /* 输入框字体色 */
             }
             QPushButton {
                 background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
@@ -2470,8 +3151,6 @@ class CreateScriptDialog(QDialog):
                 border: 1px solid #999999;
                 box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
             }
-
-
         """)
 
         self.list_widget = list_widget
@@ -2554,7 +3233,6 @@ class CreateScriptDialog(QDialog):
                     if not selected_scripts:
                         QMessageBox.warning(self, "警告", "未选择任何脚本进行合并！")
                     else:
-                        # Use the styled MergeScriptNameDialog instead of QInputDialog
                         name_dialog = MergeScriptNameDialog(self)
                         if name_dialog.exec_():
                             name = name_dialog.get_name()
@@ -2572,52 +3250,134 @@ class CreateScriptDialog(QDialog):
                                 update_item_colors()
                                 appendLogWithEffect(self.display_area,
                                                     f"创建合并脚本🔗 '{name}' 成功！包含 {len(selected_scripts)} 个子脚本\n")
-                                self.close()  # Add this line to close the dialog
+                                self.close()
         except Exception as e:
             appendLogWithEffect(self.display_area, f"Error creating merge script: {e}\n")
             QMessageBox.critical(self, tr('错误'), f"{tr('创建合并脚本时发生错误')}: {e}")
 
 
 class StyledScrollingDelegate(QStyledItemDelegate):
-    def __init__(self, parent):
+    def __init__(self, parent=None):
         super().__init__(parent)
         self.list_widget = parent
-        # 从样式表获取颜色
-        self.even_color = QColor("#F5F5F5")  # 偶数行颜色
-        self.odd_color = QColor("#E8E8E8")  # 奇数行颜色
-        self.selected_color = QColor("#A0A0A0")  # 选中颜色
+
+        # 获取全局夜间模式标志
+        global night_mode
+        self.night_mode = night_mode
+
+        # 根据夜间模式选择颜色
+        self.update_colors()
+
+    def update_colors(self):
+        """根据夜间模式更新颜色"""
+        if self.night_mode:
+            self.even_color = QColor("#333333")  # 夜间模式偶数行颜色：深灰
+            self.odd_color = QColor("#3A3A3A")  # 夜间模式奇数行颜色：稍浅的深灰
+            self.selected_color = QColor("#E8ECEF")  # 夜间模式选中颜色：浅白色
+            self.hover_color = QColor("#E8ECEF")  # 夜间模式悬停颜色：稍亮的浅白色
+            self.shadow_color = QColor(200, 200, 200, 60)  # 夜间模式阴影颜色：较亮的灰白色
+            self.selected_text_color = QColor("#000000")  # 夜间模式选中字体颜色：黑色
+        else:
+            self.even_color = QColor("#F7F9FC")  # 日间模式偶数行颜色：浅蓝灰色，干净高级
+            self.odd_color = QColor("#EDF1F7")  # 日间模式奇数行颜色：稍深的蓝灰色，柔和对比
+            self.selected_color = QColor("#D1E0FF")  # 日间模式选中颜色：浅蓝色，现代感
+            self.hover_color = QColor("#D1E0FF")  # 日间模式悬停颜色：浅灰蓝色，优雅过渡
+            self.shadow_color = QColor(50, 50, 50, 50)  # 日间模式阴影颜色：深灰色，柔和高雅
+            self.selected_text_color = QColor("#000000")  # 日间模式选中字体颜色：黑色
 
     def paint(self, painter, option, index):
-        # 保存painter状态
+        # 在绘制前更新颜色，确保实时反映夜间模式
+        global night_mode
+        if self.night_mode != night_mode:
+            self.night_mode = night_mode
+            self.update_colors()
+
         painter.save()
+        # 设置抗锯齿和平滑像素转换以提高渲染质量
+        painter.setRenderHint(QPainter.Antialiasing, True)
+        painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
 
-        item = self.list_widget.itemFromIndex(index)
+        # 获取当前项
+        item = self.list_widget.item(index.row())
         if not item:
-            return super().paint(painter, option, index)
+            painter.restore()
+            return
 
-        # ---- 1. 绘制背景 ----
-        bg_color = self.even_color if index.row() % 2 == 0 else self.odd_color
+        # 检查是否为悬停状态
+        item_id = item.data(Qt.UserRole)
+        is_hovered = item_id in self.hover_states
+
+        # 获取悬停动画进度
+        progress = self.hover_states.get(item_id, 0.0)
+        eased_progress = self.ease_animation(progress)
+
+        # 确定背景颜色
         if option.state & QStyle.State_Selected:
             bg_color = self.selected_color
-        if option.state & QStyle.State_MouseOver:
-            bg_color = bg_color.darker(110)  # 悬停时稍微变暗
+        elif index.row() % 2 == 0:
+            bg_color = self.even_color
+        else:
+            bg_color = self.odd_color
 
-        painter.fillRect(option.rect, bg_color)
+        # 如果是悬停状态，混合颜色
+        if is_hovered:
+            bg_color = self.mix_colors(bg_color, self.hover_color, eased_progress)
 
-        # ---- 2. 绘制图标 ----
+        # 悬停动画参数配置
+        max_offset = 3  # 卡片向右滑动的最大像素距离
+        scale = 1.0 + 0.05 * eased_progress  # 轻微放大效果，增加“弹出”感
+        rotation = 15 * eased_progress  # 旋转角度，最大1.5度
+        shadow_opacity = 0.3 + 0.2 * eased_progress  # 动态阴影透明度
+
+        # 获取原始项矩形区域
+        original_rect = option.rect
+
+        # 应用悬停变换
+        transformed_rect = QRectF(original_rect)
+        if is_hovered:
+            # 计算偏移量
+            offset = max_offset * eased_progress
+            transformed_rect.translate(offset, 0)
+
+            # 计算缩放中心
+            center = transformed_rect.center()
+
+            # 应用缩放和旋转
+            painter.translate(center)
+            painter.rotate(rotation)
+            painter.scale(scale, scale)
+            painter.translate(-center)
+
+            # 绘制阴影
+            shadow_color = self.shadow_color
+            shadow_color.setAlphaF(shadow_opacity)
+            painter.setPen(Qt.NoPen)
+            painter.setBrush(shadow_color)
+            shadow_offset = 3  # 阴影偏移量
+            shadow_rect = transformed_rect.translated(shadow_offset, shadow_offset)
+            painter.drawRoundedRect(shadow_rect, 10, 10)
+
+        # 绘制背景
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(bg_color)
+        painter.drawRoundedRect(transformed_rect, 10, 10)
+
+        # 绘制图标
+        icon_size = 24
         icon = item.icon()
-        if not icon.isNull():
-            icon_rect = QRect(option.rect.left() + 5,
-                              option.rect.top() + (option.rect.height() - 16) // 2,
-                              16, 16)
-            # 先绘制图标（不受文本滑动影响）
-            painter.drawPixmap(icon_rect, icon.pixmap(16, 16))
+        icon_rect = QRect(int(transformed_rect.left() + 8),
+                          int(transformed_rect.center().y() - icon_size / 2),
+                          icon_size, icon_size)
+        icon.paint(painter, icon_rect, Qt.AlignCenter)
 
-        # ---- 3. 绘制文本 ----
+        # 绘制文本
         text = item.text()
-        fm = QFontMetrics(option.font)
+        font = painter.font()
+        font.setPointSize(12)  # 固定字体大小
+        painter.setFont(font)
+        fm = QFontMetrics(font)
         text_width = fm.horizontalAdvance(text)
-        available_width = option.rect.width() - 30  # 图标占25px（5+16+4）
+        available_width = transformed_rect.width() - 35
 
         # 获取滚动数据
         scroll_data = item.data(Qt.UserRole + 1)
@@ -2626,28 +3386,205 @@ class StyledScrollingDelegate(QStyledItemDelegate):
         # 设置文本颜色
         text_color = option.palette.color(QPalette.Text)
         if option.state & QStyle.State_Selected:
-            text_color = option.palette.color(QPalette.HighlightedText)
+            text_color = self.selected_text_color
+        if is_hovered:
+            if self.night_mode:
+                text_color = QColor("#000000")  # 夜间模式悬停时字体为黑色
+            else:
+                text_color = text_color.lighter(120)
+
         painter.setPen(text_color)
 
-        # 文本绘制区域（固定从图标右侧开始）
-        text_rect = QRect(option.rect)
-        text_rect.setLeft(option.rect.left() + 25)
-        text_rect.setWidth(available_width)
+        # 绘制文本区域
+        text_rect = QRect(transformed_rect.toRect())
+        text_rect.setLeft(int(transformed_rect.left() + 35))
+        text_rect.setWidth(int(available_width))
 
         if text_width > available_width:
-            # 启用裁剪防止文本溢出
             painter.setClipRect(text_rect)
-
-            # 应用滑动偏移
             adjusted_rect = QRect(text_rect)
-            adjusted_rect.setLeft(text_rect.left() - offset)
-
+            adjusted_rect.translate(-offset, 0)
             painter.drawText(adjusted_rect, Qt.AlignLeft | Qt.AlignVCenter, text)
         else:
-            # 文本不超出时正常绘制
             painter.drawText(text_rect, Qt.AlignLeft | Qt.AlignVCenter, text)
 
         painter.restore()
+
+    def mix_colors(self, color1, color2, factor):
+        """混合两种颜色"""
+        r1, g1, b1 = color1.red(), color1.green(), color1.blue()
+        r2, g2, b2 = color2.red(), color2.green(), color2.blue()
+
+        r = int(r1 + (r2 - r1) * factor)
+        g = int(g1 + (g2 - g1) * factor)
+        b = int(b1 + (b2 - b1) * factor)
+
+        return QColor(r, g, b)
+
+    def ease_animation(self, progress):
+        """缓动函数（例如，ease-out）"""
+        return progress  # 可以替换为更复杂的缓动函数
+
+    def enterEvent(self, event):
+        """鼠标进入事件"""
+        index = self.indexAt(event.pos())
+        if index.isValid():
+            item = self.list_widget.item(index.row())
+            if item:
+                item_id = item.data(Qt.UserRole)
+                self.start_hover_animation(item_id)
+
+    def leaveEvent(self, event):
+        """鼠标离开事件"""
+        index = self.indexAt(event.pos())
+        if index.isValid():
+            item = self.list_widget.item(index.row())
+            if item:
+                item_id = item.data(Qt.UserRole)
+                self.start_hover_animation(item_id, reverse=True)
+
+    def mouseMoveEvent(self, event):
+        """鼠标移动事件"""
+        index = self.indexAt(event.pos())
+        if index.isValid():
+            item = self.list_widget.item(index.row())
+            if item:
+                item_id = item.data(Qt.UserRole)
+                if item_id != getattr(self, 'current_hover_item_id', None):
+                    # 如果当前悬停项改变，则启动新的悬停动画
+                    if hasattr(self, 'current_hover_item_id') and self.current_hover_item_id is not None:
+                        self.start_hover_animation(self.current_hover_item_id, reverse=True)  # 反向启动之前的动画
+                    self.current_hover_item_id = item_id
+                    self.start_hover_animation(item_id)
+        else:
+            # 如果鼠标不在任何项上，且有悬停项，则反向启动动画
+            if hasattr(self, 'current_hover_item_id') and self.current_hover_item_id is not None:
+                self.start_hover_animation(self.current_hover_item_id, reverse=True)
+                self.current_hover_item_id = None
+
+    def start_hover_animation(self, item_id, reverse=False):
+        """启动悬停动画"""
+        if item_id in self.hover_animations:
+            self.hover_animations[item_id].stop()  # 停止之前的动画
+
+        animation = QPropertyAnimation(self, b"hover_progress")
+        animation.setItemId(item_id)  # 使用自定义方法存储 item_id
+        animation.setDuration(250)  # 动画时长
+        animation.setStartValue(self.hover_states.get(item_id, 0.0))
+        animation.setEndValue(0.0 if reverse else 1.0)
+        animation.setEasingCurve(QEasingCurve.Linear)  # 动画曲线
+        animation.finished.connect(lambda: self.animation_finished(item_id))  # 动画完成信号
+
+        animation.valueChanged.connect(self.update_hover_state)  # 连接到更新悬停状态的槽函数
+        self.hover_animations[item_id] = animation
+        animation.start()
+
+    def animation_finished(self, item_id):
+        """动画完成时清理"""
+        if item_id in self.hover_animations:
+            del self.hover_animations[item_id]
+        self.viewport().update()
+
+    def update_hover_state(self, value):
+        """更新悬停状态"""
+        animation = self.sender()
+        if animation:
+            item_id = animation.itemId()  # 使用自定义方法获取 item_id
+            self.hover_states[item_id] = value
+            self.update_scroll_positions()  # 更新滚动位置
+            self.viewport().update()
+
+    def setHoverProgress(self, progress):
+        """设置悬停进度"""
+        animation = self.sender()
+        if animation:
+            item_id = animation.itemId()
+            self.hover_states[item_id] = progress
+            self.viewport().update()
+
+    def hoverProgress(self):
+        """获取悬停进度"""
+        animation = self.sender()
+        if animation:
+            item_id = animation.itemId()
+            return self.hover_states.get(item_id, 0.0)
+        return 0.0
+
+    def update_scroll_positions(self):
+        viewport = self.viewport()
+        viewport_width = viewport.width()
+        fm = QFontMetrics(self.font())
+
+        for i in range(self.count()):
+            item = self.item(i)
+            if not item or item == self.current_hover_item:  # 改为 current_hover_item
+                continue
+
+            text = item.text()
+            text_width = fm.horizontalAdvance(text)
+            available_width = viewport_width - 35
+
+            if text_width > available_width:
+                item_id = item.data(Qt.UserRole)
+                if item_id not in self.scroll_animations:
+                    self.start_scroll_animation(item, text_width, available_width)
+
+    def start_scroll_animation(self, item, text_width, available_width):
+        """启动滚动动画"""
+        item_id = item.data(Qt.UserRole)
+        if item_id in self.scroll_animations:
+            self.scroll_animations[item_id].stop()
+
+        max_offset = text_width - available_width
+        duration = max(5000, int(max_offset * 20))  # 动画时长与文本长度成正比
+
+        animation = QPropertyAnimation(self, b"scroll_offset")
+        animation.setItemId(item_id)  # 使用自定义方法存储 item_id
+        animation.setDuration(duration)
+        animation.setStartValue(0)
+        animation.setEndValue(max_offset)
+        animation.setLoopCount(-1)  # 无限循环
+        animation.setEasingCurve(QEasingCurve.Linear)
+
+        animation.valueChanged.connect(self.update_scroll_offset)
+        self.scroll_animations[item_id] = animation
+        animation.start()
+
+    def update_scroll_offset(self, offset):
+        """更新滚动偏移"""
+        animation = self.sender()
+        if animation:
+            item_id = animation.itemId()
+            for i in range(self.count()):
+                item = self.item(i)
+                if item and item.data(Qt.UserRole) == item_id:
+                    item.setData(Qt.UserRole + 1, (offset,))  # 存储偏移量
+                    break
+            self.viewport().update()
+
+    def setScrollOffset(self, offset):
+        """设置滚动偏移"""
+        animation = self.sender()
+        if animation:
+            item_id = animation.itemId()
+            for i in range(self.count()):
+                item = self.item(i)
+                if item and item.data(Qt.UserRole) == item_id:
+                    item.setData(Qt.UserRole + 1, (offset,))  # 存储偏移量
+                    break
+            self.viewport().update()
+
+    def scrollOffset(self):
+        """获取滚动偏移"""
+        animation = self.sender()
+        if animation:
+            item_id = animation.itemId()
+            for i in range(self.count()):
+                item = self.item(i)
+                if item and item.data(Qt.UserRole) == item_id:
+                    scroll_data = item.data(Qt.UserRole + 1)
+                    return scroll_data[0] if scroll_data else 0
+        return 0
 
 
 class UnifiedItemDelegate(QStyledItemDelegate):
@@ -2655,115 +3592,170 @@ class UnifiedItemDelegate(QStyledItemDelegate):
         super().__init__(parent)
         self.list_widget = parent
 
-        # 颜色定义
-        self.even_color = QColor("#F5F5F5")
-        self.odd_color = QColor("#E8E8E8")
-        self.selected_color = QColor("#A0A0A0")
-        self.hover_color = QColor("#C0C0C0")
+        # 获取全局夜间模式标志
+        global night_mode
+        self.night_mode = night_mode
 
-        # 悬停效果参数
-        self.hover_scale = 1.3
-        self.hover_z = 5
-        self.hover_shadow = QColor(0, 0, 0, 30)
+        # 根据夜间模式选择颜色
+        self.update_colors()
+
+    def update_colors(self):
+        """根据夜间模式更新颜色"""
+        if self.night_mode:
+            self.even_color = QColor("#333333")  # 夜间模式偶数行颜色：深灰
+            self.odd_color = QColor("#3A3A3A")  # 夜间模式奇数行颜色：稍浅的深灰
+            self.selected_color = QColor("#E8ECEF")  # 夜间模式选中颜色：浅白色
+            self.hover_color = QColor("#E8ECEF")  # 夜间模式悬停颜色：稍亮的浅白色
+            self.shadow_color = QColor(200, 200, 200, 60)  # 夜间模式阴影颜色：较亮的灰白色
+            self.selected_text_color = QColor("#000000")  # 夜间模式选中字体颜色：黑色
+        else:
+            self.even_color = QColor("#F7F9FC")  # 日间模式偶数行颜色：浅蓝灰色，干净高级
+            self.odd_color = QColor("#EDF1F7")  # 日间模式奇数行颜色：稍深的蓝灰色，柔和对比
+            self.selected_color = QColor("#D1E0FF")  # 日间模式选中颜色：浅蓝色，现代感
+            self.hover_color = QColor("#D1E0FF")  # 日间模式悬停颜色：浅灰蓝色，优雅过渡
+            self.shadow_color = QColor(50, 50, 50, 50)  # 日间模式阴影颜色：深灰色，柔和高雅
+            self.selected_text_color = QColor("#000000")  # 日间模式选中字体颜色：黑色
 
     def paint(self, painter, option, index):
-        painter.save()
+        # 在绘制前更新颜色，确保实时反映夜间模式
+        global night_mode
+        if self.night_mode != night_mode:
+            self.night_mode = night_mode
+            self.update_colors()
 
+        painter.save()
+        # 设置抗锯齿和平滑像素转换以提高渲染质量
+        painter.setRenderHints(
+            QPainter.Antialiasing | QPainter.SmoothPixmapTransform | QPainter.HighQualityAntialiasing)
+
+        # 获取当前项
         item = self.list_widget.itemFromIndex(index)
         if not item:
+            painter.restore()
             return super().paint(painter, option, index)
 
-        # 如果项被隐藏，则不绘制
+        # 如果项隐藏，则不绘制
         if item.isHidden():
             painter.restore()
             return
 
-        # 计算可见项的顺序
+        # 获取可见项索引
         visible_index = self.get_visible_index(index)
-        if visible_index == -1:  # 如果不可见，则跳过
+        if visible_index == -1:
             painter.restore()
             return
 
-        # 获取悬停进度
-        hover_progress = self.list_widget.hover_states.get(id(item), 0.0)
+        # 获取悬停进度并确保平滑
+        hover_progress = min(max(self.list_widget.hover_states.get(id(item), 0.0), 0.0), 1.0)
         is_hovered = hover_progress > 0
+        # 使用缓入缓出二次函数计算动画进度
+        eased_progress = self.easeInOutQuad(hover_progress)
 
-        # 应用缓动函数
-        eased_progress = self.easeOutCubic(hover_progress)
-
-        # ---- 1. 绘制背景 ----
+        # 计算背景颜色
         bg_color = self.even_color if visible_index % 2 == 0 else self.odd_color
         if option.state & QStyle.State_Selected:
             bg_color = self.selected_color
-
         if is_hovered:
             bg_color = self.mix_colors(bg_color, self.hover_color, eased_progress)
 
-        # 计算缩放和阴影
-        scale = 1.0 + (self.hover_scale - 1.0) * eased_progress
-        shadow_opacity = int(30 * eased_progress)
+        # 悬停动画参数配置
+        max_offset = 3  # 卡片向右滑动的最大像素距离
+        scale = 1.0 + 0.05 * eased_progress  # 轻微放大效果，增加“弹出”感
+        rotation = 7 * eased_progress  # 旋转角度，最大1.5度
+        shadow_opacity = 0.3 + 0.2 * eased_progress  # 动态阴影透明度
 
-        # 保存原始矩形
+        # 获取原始项矩形区域
         original_rect = option.rect
 
-        # 应用变换 - 向右放大
-        if scale != 1.0:
-            left_center = QPoint(original_rect.left(), original_rect.center().y())
-            painter.translate(left_center)
+        # 应用悬停变换
+        transformed_rect = QRectF(original_rect)
+        if is_hovered:
+            pivot_x = original_rect.center().x()  # 修改旋转圆心为选项左侧
+            pivot_y = original_rect.center().y()
+
+            # 使用浮点数偏移以确保平滑动画
+            offset_x = max_offset * eased_progress
+            offset_y = 0 * eased_progress  # 轻微垂直提升
+            # 优化变换顺序以减少渲染开销
+            painter.translate(pivot_x + offset_x, pivot_y + offset_y)
             painter.scale(scale, scale)
-            painter.translate(-left_center)
+            painter.rotate(rotation)
+            painter.translate(-pivot_x, -pivot_y)
+
+            transformed_rect = QRectF(original_rect).translated(offset_x, offset_y)
+
+        # 绘制阴影（仅在悬停时）
+        if is_hovered:
+            shadow_path = QPainterPath()
+            shadow_rect = QRectF(transformed_rect.adjusted(4, 4, -4, -4))
+            shadow_path.addRoundedRect(shadow_rect, 19, 19)
+            shadow_color = self.shadow_color
+            shadow_color.setAlphaF(shadow_opacity)
+            painter.setPen(Qt.NoPen)
+            painter.setBrush(shadow_color)
+            painter.drawPath(shadow_path)
 
         # 绘制圆角背景
         path = QPainterPath()
-        radius = 6  # 圆角半径
-        rect_f = QRectF(original_rect)
+        radius = 19
+        rect_f = QRectF(transformed_rect.adjusted(2, 2, -2, -2))
         path.addRoundedRect(rect_f, radius, radius)
-        painter.fillPath(path, bg_color)
 
-        # 绘制圆角阴影
-        if shadow_opacity > 0:
-            shadow = QColor(self.hover_shadow)
-            shadow.setAlpha(shadow_opacity)
-            shadow_rect = QRectF(original_rect.adjusted(2, 2, 2, 4))
-            shadow_path = QPainterPath()
-            shadow_path.addRoundedRect(shadow_rect, radius, radius)
-            painter.setPen(Qt.NoPen)
-            painter.setBrush(shadow)
-            painter.drawPath(shadow_path)
+        # 应用渐变背景
+        gradient = QLinearGradient(rect_f.topLeft(), rect_f.bottomRight())
+        gradient.setColorAt(0, bg_color.lighter(110))
+        gradient.setColorAt(1, bg_color.darker(105))
+        painter.setPen(Qt.NoPen)
+        painter.fillPath(path, gradient)
 
-        # ---- 2. 绘制图标 ----
+        # 恢复画家状态以绘制图标和文本（避免旋转影响）
+        painter.restore()
+        painter.save()
+
+        # 绘制图标
         icon = item.icon()
         if not icon.isNull():
             icon_rect = QRect(
-                original_rect.left() + 5,
-                original_rect.top() + (original_rect.height() - 16) // 2,
-                16, 16
+                int(transformed_rect.left() + 8),
+                int(transformed_rect.top() + (transformed_rect.height() - 20) / 2),
+                20, 20
             )
-            painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
-            icon.paint(painter, icon_rect)
+            icon.paint(painter, icon_rect, Qt.AlignCenter)
 
-        # ---- 3. 绘制文本 ----
+        # 绘制文本
         text = item.text()
-        fm = QFontMetrics(option.font)
+        font = option.font
+        font.setPointSize(12)  # 固定字体大小
+        painter.setFont(font)
+        fm = QFontMetrics(font)
         text_width = fm.horizontalAdvance(text)
-        available_width = original_rect.width() - 30
+        available_width = transformed_rect.width() - 35
 
+        # 获取滚动数据
         scroll_data = item.data(Qt.UserRole + 1)
         offset = scroll_data[0] if scroll_data else 0
 
+        # 设置文本颜色
         text_color = option.palette.color(QPalette.Text)
         if option.state & QStyle.State_Selected:
-            text_color = option.palette.color(QPalette.HighlightedText)
+            text_color = self.selected_text_color
+        if is_hovered:
+            if self.night_mode:
+                text_color = QColor("#000000")  # 夜间模式悬停时字体为黑色
+            else:
+                text_color = text_color.lighter(120)
+
         painter.setPen(text_color)
 
-        text_rect = QRect(original_rect)
-        text_rect.setLeft(original_rect.left() + 25)
-        text_rect.setWidth(available_width)
+        # 绘制文本区域
+        text_rect = QRect(transformed_rect.toRect())
+        text_rect.setLeft(int(transformed_rect.left() + 35))
+        text_rect.setWidth(int(available_width))
 
         if text_width > available_width:
             painter.setClipRect(text_rect)
             adjusted_rect = QRect(text_rect)
-            adjusted_rect.setLeft(text_rect.left() - offset)
+            adjusted_rect.setLeft(int(text_rect.left() - offset))
             painter.drawText(adjusted_rect, Qt.AlignLeft | Qt.AlignVCenter, text)
         else:
             painter.drawText(text_rect, Qt.AlignLeft | Qt.AlignVCenter, text)
@@ -2779,9 +3771,10 @@ class UnifiedItemDelegate(QStyledItemDelegate):
                 if i == index.row():
                     return visible_index
                 visible_index += 1
-        return -1  # 如果项不可见，返回 -1
+        return -1
 
     def mix_colors(self, color1, color2, ratio):
+        """混合两种颜色根据比例"""
         inv_ratio = 1 - ratio
         return QColor(
             int(color1.red() * inv_ratio + color2.red() * ratio),
@@ -2789,9 +3782,13 @@ class UnifiedItemDelegate(QStyledItemDelegate):
             int(color1.blue() * inv_ratio + color2.blue() * ratio)
         )
 
-    def easeOutCubic(self, t):
-        return 1 - (1 - t) ** 3
-
+    def easeInOutQuad(self, t):
+        """缓入缓出二次动画函数，增加平滑度"""
+        t *= 2
+        if t < 1:
+            return 0.5 * t * t
+        t -= 1
+        return -0.5 * (t * (t - 2) - 1)
 
 
 class SmoothListWidget(QListWidget):
@@ -2822,6 +3819,12 @@ class SmoothListWidget(QListWidget):
         """更新所有项的动画状态"""
         needs_update = False
 
+        # 动画持续时间（毫秒）
+        animation_duration = 300  # 可配置的动画时间，单位：毫秒
+
+        # 计算每帧的步长，基于定时器间隔（5ms）和期望的总动画时间
+        step = (5.0 / animation_duration) * 2  # 调整步长以控制动画速度
+
         # 更新所有项的悬停状态
         for i in range(self.count()):
             item = self.item(i)
@@ -2838,7 +3841,6 @@ class SmoothListWidget(QListWidget):
                 continue
 
             # 计算新状态
-            step = 0.12  # 调整这个值可以改变动画速度
             if target > current:
                 new_progress = min(target, current + step)
             else:
@@ -2879,7 +3881,7 @@ class SmoothListWidget(QListWidget):
             speed = 0.8 if scroll_data[0] < 10 or scroll_data[0] > scroll_data[2] - 10 else 1.2
 
             # 更新位置（基础速度0.5 * 动态系数）
-            new_offset = scroll_data[0] + (0.5 * speed) * scroll_data[1]
+            new_offset = scroll_data[0] + (0.4 * speed) * scroll_data[1]
 
             # 边界反弹逻辑
             if new_offset >= scroll_data[2]:
@@ -2904,7 +3906,6 @@ class SmoothListWidget(QListWidget):
         text_width = fm.horizontalAdvance(item.text())
         available_width = self.viewport().width() - 30  # 25(icon) + 5(margin)
         return text_width > available_width
-
 
     def updateScrollingOffsets(self):
         for i in range(self.count()):
@@ -2995,51 +3996,12 @@ class SmoothListWidget(QListWidget):
         super().leaveEvent(event)
 
 
-
 class ScrollingItemDelegate(QStyledItemDelegate):
     def __init__(self, parent):
         super().__init__(parent)
         self.list_widget = parent
         self.even_color = parent.palette().base().color()  # 从样式表获取基础色
         self.odd_color = self.even_color.darker(105)  # 稍微变暗
-
-    def paint(self, painter, option, index):
-        # 获取列表项
-        item = self.list_widget.itemFromIndex(index)
-        if not item:
-            return super().paint(painter, option, index)
-
-        # 保存原始绘制状态
-        painter.save()
-
-        # 设置绘制区域
-        rect = option.rect
-        text = item.text()
-
-        # 检查是否有滚动数据
-        scrolling_data = item.data(Qt.UserRole + 1)
-        offset = scrolling_data[0] if scrolling_data else 0
-
-        # 计算文本宽度
-        fm = QFontMetrics(option.font)
-        text_width = fm.horizontalAdvance(text)
-        available_width = rect.width() - 20  # 留出边距
-
-        # 只有文本超出时才应用偏移
-        if text_width > available_width:
-            # 设置裁剪区域防止文本溢出
-            painter.setClipRect(rect)
-
-            # 绘制文本（应用偏移）
-            text_rect = QRect(rect)
-            text_rect.setLeft(text_rect.left() - offset)
-            painter.drawText(text_rect, Qt.AlignLeft | Qt.AlignVCenter, text)
-        else:
-            # 文本不超出时正常绘制
-            super().paint(painter, option, index)
-
-        # 恢复绘制状态
-        painter.restore()
 
 
 def show_create_script_dialog(parent, list_widget, display_area, completer_model):
