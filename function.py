@@ -5,7 +5,6 @@ import json
 import platform
 import shutil
 import sys
-
 import win32con
 import win32gui
 import win32ui
@@ -57,7 +56,7 @@ dictionary_path = get_resource_path('english_words.txt')
 # **构建索引**
 word_to_translation = {}  # 直接查找单词 -> 翻译
 translation_to_word = {}  # 直接查找翻译 -> 单词
-all_words = []  # 仅存储所有英文单词，用于模糊匹配
+all_words = []  # 仅存储所有英文单词，用于模糊匹配功能
 
 dictionary_data = []
 

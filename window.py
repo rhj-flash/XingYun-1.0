@@ -1347,7 +1347,7 @@ def create_main_window():
 
     # 设置右键菜单
     setup_context_menu(list_widget, display_area)
-    # 显示欢迎界面
+    # 显示欢迎界面功能
     display_welcome_screen(display_area)
     update_item_colors()
     return main_window
