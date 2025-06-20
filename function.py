@@ -28,24 +28,16 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import QThread, pyqtSignal, Qt
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from window import get_resource_path
-
-# 默认图标路径
-DEFAULT_ICON_PATH = get_resource_path('imge.png')
+from utils import get_resource_path, CACHE_LOCK, ICON_CACHE, ICON_EXECUTOR
 
 # 脚本路径
 scripts_path = get_resource_path("resources/scripts.json")
 
+# 默认图标路径
+DEFAULT_ICON_PATH = get_resource_path('imge.png')
+
 # 缓存机制
 CACHE = {}
-
-# 在文件顶部添加
-from concurrent.futures import ThreadPoolExecutor
-import threading
-
-# 全局缓存
-ICON_CACHE = {}
-CACHE_LOCK = threading.Lock()
 
 # 线程池
 ICON_EXECUTOR = ThreadPoolExecutor(max_workers=5)
@@ -631,36 +623,38 @@ def get_wifi_info():
         return CACHE['wifi_info']
     try:
         # 获取当前连接的 WiFi 网络信息
-        current_network_output = subprocess.check_output(['netsh', 'wlan', 'show', 'interfaces'], encoding='utf-8')
-        # 尝试匹配 SSID 信息
+        current_network_output = subprocess.check_output(
+            ['netsh', 'wlan', 'show', 'interfaces'],
+            encoding='utf-8',
+            creationflags=subprocess.CREATE_NO_WINDOW,
+            stderr=subprocess.PIPE
+        )
+        # 提取 SSID
         current_network_match = re.search(r"SSID\s*:\s*(.+)", current_network_output)
-        if current_network_match:
-            current_network = current_network_match.group(1).strip()
-        else:
-            current_network = "未知"
+        if not current_network_match:
+            CACHE['wifi_info'] = "WiFi信息: 未连接到任何网络"
+            return CACHE['wifi_info']
+        current_network = current_network_match.group(1).strip()
 
-        # 获取当前连接WiFi的详细信息
-        current_wifi_info = f"〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰WIFI信息〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰\n\n当前WiFi名称: {current_network}\n{current_network_output}"
+        # 获取当前 WiFi 的密码
+        try:
+            current_profile_output = subprocess.check_output(
+                ['netsh', 'wlan', 'show', 'profile', current_network, 'key=clear'],
+                encoding='utf-8',
+                creationflags=subprocess.CREATE_NO_WINDOW,
+                stderr=subprocess.PIPE
+            )
+            current_password_match = re.search(r"Key Content\s*:\s*(.+)", current_profile_output)
+            current_password = current_password_match.group(1).strip() if current_password_match else "未知"
+        except subprocess.CalledProcessError:
+            current_password = "无法获取（可能需要管理员权限）"
 
-        # 获取当前WiFi的密码
-        current_profile_output = subprocess.check_output(
-            ['netsh', 'wlan', 'show', 'profile', current_network, 'key=clear'], encoding='utf-8')
-        current_password_match = re.search(r"Key Content\s*:\s*(.+)", current_profile_output)
-        current_password = current_password_match.group(1).strip() if current_password_match else "未知"
-        current_wifi_info += f"〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰\n当前WiFi密码: {current_password}\n"
-
-        # 获取当前连接WiFi的其他详细信息
+        # 提取其他信息
         network_type_match = re.search(r"Network type\s*:\s*(.+)", current_network_output)
         network_type = network_type_match.group(1).strip() if network_type_match else "未知"
 
         radio_type_match = re.search(r"Radio type\s*:\s*(.+)", current_network_output)
         radio_type = radio_type_match.group(1).strip() if radio_type_match else "未知"
-
-        receive_rate_match = re.search(r"Receive rate\s*:\s*(.+)", current_network_output)
-        receive_rate = receive_rate_match.group(1).strip() if receive_rate_match else "未知"
-
-        transmit_rate_match = re.search(r"Transmit rate\s*:\s*(.+)", current_network_output)
-        transmit_rate = transmit_rate_match.group(1).strip() if transmit_rate_match else "未知"
 
         signal_match = re.search(r"Signal\s*:\s*(.+)", current_network_output)
         signal = signal_match.group(1).strip() if signal_match else "未知"
@@ -677,73 +671,56 @@ def get_wifi_info():
         connection_mode_match = re.search(r"Connection mode\s*:\s*(.+)", current_network_output)
         connection_mode = connection_mode_match.group(1).strip() if connection_mode_match else "未知"
 
-        current_wifi_info += f"网络类型: {network_type}\n"
-        current_wifi_info += f"无线电类型: {radio_type}\n"
-        current_wifi_info += f"接收速率:同上\n"
-        current_wifi_info += f"发送速率:同上\n"
-        current_wifi_info += f"信号强度: {signal}\n"
-        current_wifi_info += f"信道: {channel}\n"
-        current_wifi_info += f"认证方式: {authentication}\n"
-        current_wifi_info += f"加密方式: {cipher}\n"
-        current_wifi_info += f"连接模式: {connection_mode}\n〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰WiFi历史日志〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰"
+        # 格式化当前 WiFi 信息
+        current_wifi_info = (
+            f"当前WiFi名称: {current_network}\n"
+            f"当前WiFi密码: {current_password}\n"
+            f"网络类型: {network_type}\n"
+            f"无线电类型: {radio_type}\n"
+            f"信号强度: {signal}\n"
+            f"信道: {channel}\n"
+            f"认证方式: {authentication}\n"
+            f"加密方式: {cipher}\n"
+            f"连接模式: {connection_mode}\n"
+        )
 
+        # 获取历史 WiFi 信息（简化，只取前 5 个）
+        try:
+            profile_list_output = subprocess.check_output(
+                ['netsh', 'wlan', 'show', 'profiles'],
+                encoding='utf-8',
+                creationflags=subprocess.CREATE_NO_WINDOW,
+                stderr=subprocess.PIPE
+            )
+            profile_names = re.findall(r"All User Profile\s*:\s*(.*)", profile_list_output)[:5]
+            recent_wifi_info = "最近连接的 WiFi:\n"
+            for profile_name in profile_names:
+                try:
+                    profile_info_output = subprocess.check_output(
+                        ['netsh', 'wlan', 'show', 'profile', profile_name, 'key=clear'],
+                        encoding='utf-8',
+                        creationflags=subprocess.CREATE_NO_WINDOW,
+                        stderr=subprocess.PIPE
+                    )
+                    password_match = re.search(r"Key Content\s*:\s*(.+)", profile_info_output)
+                    password = password_match.group(1).strip() if password_match else "未知"
+                    recent_wifi_info += f"  WiFi: {profile_name}, 密码: {password}\n"
+                except subprocess.CalledProcessError:
+                    continue
+        except subprocess.CalledProcessError:
+            recent_wifi_info = "最近连接的 WiFi: 无法获取\n"
 
-        # 获取所有WiFi配置文件列表
-        profile_list_output = subprocess.check_output(['netsh', 'wlan', 'show', 'profiles'], encoding='utf-8')
-
-        # 提取所有WiFi配置文件名称
-        profile_names = re.findall(r"All User Profile\s*:\s*(.*)", profile_list_output)
-
-        # 初始化最近连接信息的变量
-        recent_connections = []
-
-        # 遍历每个WiFi配置文件，获取详细信息
-        for profile_name in profile_names:
-            try:
-                profile_info_output = subprocess.check_output(
-                    ['netsh', 'wlan', 'show', 'profile', profile_name, 'key=clear'], encoding='utf-8')
-
-                # 获取密码信息
-                password_match = re.search(r"Key Content\s*:\s*(.+)", profile_info_output)
-                password = password_match.group(1).strip() if password_match else "未知"
-
-                # 获取认证方式
-                authentication_match = re.search(r"Authentication\s*:\s*(.+)", profile_info_output)
-                authentication = authentication_match.group(1).strip() if authentication_match else "未知"
-
-                # 获取加密方式
-                cipher_match = re.search(r"Cipher\s*:\s*(.+)", profile_info_output)
-                cipher = cipher_match.group(1).strip() if cipher_match else "未知"
-
-                # 获取连接模式
-                connection_mode_match = re.search(r"Connection mode\s*:\s*(.+)", profile_info_output)
-                connection_mode = connection_mode_match.group(1).strip() if connection_mode_match else "未知"
-
-                # 添加到最近连接的列表中
-                recent_connections.append((profile_name.strip(), password, authentication, cipher, connection_mode))
-
-            except Exception as e:
-                print(f"获取WiFi配置文件 {profile_name} 信息时出错: {e}")
-
-        # 只显示最近10次连接的不同名称的WiFi信息
-        recent_connections = recent_connections[:10]
-
-        recent_wifi_info = ""
-        for profile_name, password, authentication, cipher, connection_mode in recent_connections:
-            recent_wifi_info += f"〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰\nWiFi名称: {profile_name}\n"
-            recent_wifi_info += f"密码: {password}\n"
-            recent_wifi_info += f"认证方式: {authentication}\n"
-            recent_wifi_info += f"加密方式: {cipher}\n"
-            recent_wifi_info += f"连接模式: {connection_mode}\n"
-
-        # 汇总当前连接和最近连接的信息
-        final_wifi_info = current_wifi_info + "\n以下是最近连接过的WiFi信息：\n" + recent_wifi_info
-
+        # 汇总信息
+        final_wifi_info = f"{current_wifi_info}\n{recent_wifi_info}"
         CACHE['wifi_info'] = final_wifi_info
         return CACHE['wifi_info']
 
+    except subprocess.CalledProcessError as e:
+        print(f"获取 WiFi 信息失败: {e.stderr}")
+        CACHE['wifi_info'] = "WiFi信息: 获取失败"
+        return CACHE['wifi_info']
     except Exception as e:
-        print(f"获取WiFi信息时出错: {e}")
+        print(f"获取 WiFi 信息时出错: {e}")
         CACHE['wifi_info'] = "WiFi信息: 获取失败"
         return CACHE['wifi_info']
 # 子函数：获取并格式化地理位置信息

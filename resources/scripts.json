@@ -1,23 +1,38 @@
 [
     {
+        "name": "v2rayN",
+        "type": "file",
+        "value": "D:/VPN/v2rayN-Core/v2rayN.exe"
+    },
+    {
+        "name": "Runoob.com",
+        "type": "url",
+        "value": "https://www.runoob.com/"
+    },
+    {
+        "name": "chat_gpt",
+        "type": "url",
+        "value": "https://chatgpt.com"
+    },
+    {
+        "name": "Grok",
+        "type": "url",
+        "value": "https://grok.com/chat"
+    },
+    {
+        "name": "Le Chat - Mistral AI  (VPN节点开伦敦)",
+        "type": "url",
+        "value": "https://chat.mistral.ai/chat/"
+    },
+    {
         "name": "deep_seek",
         "type": "url",
         "value": "https://chat.deepseek.com/"
     },
     {
-        "name": "残血deep seek",
-        "type": "url",
-        "value": "https://www.wenxiaobai.com/chat/tourist"
-    },
-    {
         "name": "软件网站",
         "type": "url",
         "value": "https://www.rjsos.com/win"
-    },
-    {
-        "name": "Google",
-        "type": "url",
-        "value": "https://www.google.com/"
     },
     {
         "name": "GitHub",
@@ -27,7 +42,12 @@
     {
         "name": "YouTube",
         "type": "url",
-        "value": "https://www.youtube.com/"
+        "value": "https://www.youtube.com"
+    },
+    {
+        "name": "Google",
+        "type": "url",
+        "value": "https://www.google.com"
     },
     {
         "name": "雷神加速器",
@@ -40,9 +60,24 @@
         "value": "https://www.bilibili.com/"
     },
     {
+        "name": "VPN_charge(VPN充值网址)",
+        "type": "url",
+        "value": "https://sakuran.org/"
+    },
+    {
         "name": "Wikipedia（维基百科）",
         "type": "url",
-        "value": "https://zh.wikipedia.org/"
+        "value": "https://zh.wikipedia.org"
+    },
+    {
+        "name": "CSDN",
+        "type": "url",
+        "value": "https://www.csdn.net/?spm=1000.2115.3001.4476"
+    },
+    {
+        "name": "微信",
+        "type": "file",
+        "value": "D:/wechat/WeChat.exe"
     },
     {
         "name": "公式识别网站",
@@ -70,13 +105,13 @@
         "value": "https://www.bearaudiotool.com/zh/tools-list"
     },
     {
-        "name": "动漫",
-        "type": "url",
-        "value": "https://www.zkk79.com/"
-    },
-    {
         "name": "看电影🎬",
         "type": "url",
         "value": "https://www.kanjuxc.cc/"
+    },
+    {
+        "name": "动漫",
+        "type": "url",
+        "value": "https://www.zkk79.com/"
     }
 ]

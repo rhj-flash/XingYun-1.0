@@ -1,32 +1,24 @@
 import hashlib
-import sys
-import os
-import weakref
-from PyQt5.QtGui import QPainterPath, QImage, QLinearGradient
 import threading  # 确保导入 threading 模块
-from datetime import datetime
+import time
 from urllib.parse import urlparse, urljoin
 
-from PyQt5.QtGui import QColor, QBrush, QFontMetrics, QPalette, QPixmap, QPainterPath
-from PyQt5.QtCore import Qt, QStringListModel, QTranslator, QCoreApplication, QPropertyAnimation, QPoint, QEvent, \
-    QTimer, QObject, QRectF
-from PyQt5.QtGui import QIcon
+from PyQt5.QtCore import QEasingCurve
+from PyQt5.QtCore import QRect
+from PyQt5.QtCore import QStringListModel, QTranslator, QCoreApplication, QPropertyAnimation, QPoint, QEvent, \
+    QTimer, QObject, QRectF, QSize, QDateTime
+from PyQt5.QtGui import QColor, QPalette
+from PyQt5.QtGui import QFontMetrics, QPainter
+from PyQt5.QtGui import QImage, QLinearGradient
+from PyQt5.QtWidgets import QGroupBox
 from PyQt5.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QListWidget,
-    QLineEdit, QCompleter, QTextEdit, QPushButton, QFileDialog, QMessageBox,
-    QInputDialog, QDialog, QListWidgetItem, QDesktopWidget, QMenu, QSizePolicy, QStyledItemDelegate,
-    QStyleOptionViewItem, QStyle, QDialogButtonBox, QGridLayout, QToolButton, QScrollArea, QFrame, QAction
+    QHBoxLayout, QSplitter, QCompleter, QListWidgetItem, QDesktopWidget, QMenu, QSizePolicy, QStyledItemDelegate,
+    QStyle, QGridLayout, QToolButton
 )
-from PyQt5.QtCore import QRect, QEasingCurve
-from PyQt5.uic.properties import QtCore
-from attr import has
 from bs4 import BeautifulSoup
+from selenium import webdriver
 
 from function import *
-from PyQt5.QtCore import QVariantAnimation, QEasingCurve
-from PyQt5.QtGui import QFontMetrics, QPainter
-from PyQt5.QtWidgets import QGroupBox
-from selenium import webdriver
 
 #    EXE打包指令
 """
@@ -45,27 +37,18 @@ pyinstaller --noconsole --onefile --name Xingyun `
     window.py
 """
 
-# 日间模式样式
-display_area_style = """
-    QTextEdit {
-        border: 1px solid #CCCCCC;
-        border-radius: 8px;
-        background-color: #F9F9F9;
-        font-family: 'Courier New', monospace;
-        font-size: 14px;
-        color: #111111;
-        padding: 10px;
-    }
+# 通用的滚动条透明样式
+scrollbar_style = """
     QScrollBar:vertical, QScrollBar:horizontal {
         border: none;
-        background: #F0F0F0;
+        background: transparent !important;  /* 强制透明 */
         width: 10px;
         height: 10px;
-        margin: 0px;  /* 解决错位问题    右侧滚动条*/
-        border-radius: 5px;
+        margin: 0px;
+        padding: 0px;
     }
     QScrollBar::handle:vertical, QScrollBar::handle:horizontal {
-        background: #BBBBBB;
+        background: #BBBBBB;  /* 日间模式滑块颜色 */
         min-height: 20px;
         min-width: 20px;
         border-radius: 5px;
@@ -73,8 +56,58 @@ display_area_style = """
     QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical,
     QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
         background: none;
+        height: 0px;
+        width: 0px;
+        border: none;
+    }
+    QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical,
+    QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {
+        background: transparent !important;  /* 确保滑轨透明 */
     }
 """
+
+# 夜间模式的滚动条样式
+scrollbar_style_night = """
+    QScrollBar:vertical, QScrollBar::horizontal {
+        border: none;
+        background: transparent !important;  /* 强制透明 */
+        width: 10px;
+        height: 10px;
+        margin: 0px;
+        padding: 0px;
+    }
+    QScrollBar::handle:vertical, QScrollBar::handle:horizontal {
+        background: #777777;  /* 夜间模式滑块颜色 */
+        min-height: 20px;
+        min-width: 20px;
+        border-radius: 5px;
+    }
+    QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical,
+    QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
+        background: none;
+        height: 0px;
+        width: 0px;
+        border: none;
+    }
+    QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical,
+    QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {
+        background: transparent !important;  /* 确保滑轨透明 */
+    }
+"""
+
+
+# 日间模式样式
+display_area_style = """
+    QTextEdit {
+        border: 0px solid #CCCCCC;
+        border-radius: 8px;
+        background-color: #F0F2F5;
+        font-family: 'Sarasa Gothic', 'Consolas', 'Courier New', sans-serif;
+        font-size: 14px;
+        color: #000000;
+        padding: 10px;
+    }
+""" + scrollbar_style
 # 定义 QMessageBox 的样式表
 message_box_style = """
 QMessageBox {
@@ -102,156 +135,119 @@ QMessageBox QPushButton:hover {
 }
 """
 
+# 日间模式样式
 list_widget_style = """
-    /* 对 QListWidget 整体进行样式设置 */
     QListWidget {
-        border: 1px solid #CCCCCC;  /* 设置列表控件的边框宽度为 1 像素，颜色为浅灰色 */
-        border-radius: 8px;  /* 设置列表控件的边框圆角半径为 8 像素，使其边角更圆润 */
-        background-color: #F5F5F5;  /* 设置列表控件的背景颜色为淡淡的灰色 */
-        font-size: 14px;  /* 设置列表控件内文本的字体大小为 14 像素 */
-        color: #444444;  /* 设置列表控件内文本的颜色为深灰色 */
+        border: 0px solid #CCCCCC;
+        border-radius: 8px;
+        background-color: #F0F2F5;
+        font-family: 'Comic Sans MS', 'KaiTi', sans-serif;
+        font-size: 16px;
+        font-weight: bold;
+        color: #000000;
     }
-    /* 对 QListWidget 中的每个列表项进行样式设置 */
     QListWidget::item {
-        padding: 10px;  /* 设置列表项的内边距为 10 像素，使内容与边框有一定间隔 */
-        white-space: nowrap;  /* 设置列表项内的文本不自动换行，保持单行显示 */
+        padding: 12px 10px;
+        height: 26px;
     }
-    /* 对鼠标悬停在 QListWidget 列表项上时的样式进行设置 */
     QListWidget::item:hover {
-        background-color: #C0C0C0;  /* 当鼠标悬停时，列表项的背景颜色变为中灰色 */
-        border-radius: 8px;  /* 当鼠标悬停时，列表项的边框圆角半径为 8 像素 */
+        background-color: #C0C0C0;
+        border-radius: 8px;
     }
-    /* 对 QListWidget 中被选中的列表项进行样式设置 */
     QListWidget::item:selected {
-        background-color: #A0A0A0;  /* 被选中的列表项背景颜色变为深一些的灰色 */
-        color: #000000;  /* 被选中的列表项文本颜色变为黑色 */
-        font-weight: bold;  /* 被选中的列表项文本字体加粗 */
+        background-color: #A0A0A0;
+        color: #000000;
+        font-weight: bold;
     }
-    /* 对 QListWidget 列表项获得焦点时的样式进行设置，这里去除了默认的焦点轮廓 */
     QListWidget::item:focus {
         outline: none;
     }
-    /* 对 QListWidget 控件本身获得焦点时的样式进行设置，同样去除了默认的焦点轮廓 */
     QListWidget:focus {
         outline: none;
     }
-"""
+""" + scrollbar_style
 
 dialog_style = """
 QDialog {
-    background-color: #ffffff;  /* 白色背景 */
-
-    border-radius: 15px;  /* 圆角 */
-    padding: 30px;  /* 内边距 */
+    background-color: #ffffff;
+    font-family: 'Sarasa Gothic', 'Consolas', 'Courier New', sans-serif;
+    border-radius: 15px;
+    padding: 30px;
 }
 QLabel {
-    font-size: 20px;  /* 标签字体大小 */
-    color: #333333;  /* 标签字体颜色 */
-    margin-bottom: 10px;  /* 标签底部外边距 */
+    font-size: 20px;
+    color: #333333;
+    margin-bottom: 10px;
 }
 QPushButton {
-    background-color: #0078d7;  /* 按钮背景颜色 */
-    color: white;  /* 按钮字体颜色 */
-    padding: 12px 25px;  /* 按钮内边距 */
-    border: none;  /* 无边框 */
-    border-radius: 10px;  /* 按钮圆角 */
-    font-size: 16px;  /* 按钮字体大小 */
-    margin: 5px 0;  /* 按钮外边距 */
+    background-color: #0078d7;
+    color: white;
+    padding: 12px 25px;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    margin: 5px 0;
 }
 QPushButton:hover {
-    background-color: #0056b3;  /* 按钮悬停背景颜色 */
+    background-color: #0056b3;
 }
 """
 
 search_edit_style = """
     QLineEdit {
-        border: 1px solid #CCCCCC;
+        background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
+                                          stop:0 #7f7f7f, stop:1 #F0F2F5);
+        border: 0px solid #CCCCCC;
         border-radius: 25px;
         padding: 5px;
+        font-family: 'Comic Sans MS', 'KaiTi', sans-serif;
         font-size: 23px;
-        font-weight: bold;  /* 输入字体加粗 */
+        font-weight: bold;
         min-width: 100px;
-        height:70px;
-        background-color: #F5F5F5;
+        height: 70px;
         color: #444444;
-        
+    }
+    QLineEdit:hover {
+        background-color: qlineargradient(spread:pad, x1:1, y1:0, x2:0, y2:0,
+                                          stop:0 #7f7f7f, stop:1 #F5F5F5);
     }
     QLineEdit:focus {
-        border: 3px solid #A0A0A0;
-        background-color: #F5F5F5;
+        border: 0px solid #A0A0A0;
+        background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
+                                          stop:0 #F0F2F5, stop:1 #7f7f7f);
     }
     QLineEdit::placeholder {
         color: #888888;
         font-size: 18px;
-        font-style: italic;  /* 提示文字保持斜体 */
+        font-style: italic;
     }
 """
 
 completer_popup_style = """
     QListView {
-        font-size: 18px;  /* 调整字体大小 */
+        font-family: 'Sarasa Gothic', 'Consolas', 'Courier New', sans-serif;
+        font-size: 18px;
         padding: 8px;
-        min-width: 300px;  /* 增加最小宽度 */
-        min-height: 250px;  /* ✅ 增加预览框的最小高度 */
+        min-width: 300px;
+        min-height: 250px;
     }
 """
 
-main_window_style = """
-    QMainWindow, QWidget {
-        background-color: #F0F2F5;  /* 统一主窗口和所有子部件背景 */
-    }
-    QSplitter {
-        background-color: #F0F2F5;  /* 确保分割器背景一致 */
-    }
-    QSplitter::handle {
-        background-color: #F0F2F5;  /* 分割器手柄背景 */
-    }
-"""
+
 
 left_widget_style = """
     QWidget {
-        background-color: #F0F2F5;  /* 浅蓝色背景 */
-        border-radius: 8px;  /* 圆角 */
+        background-color: #F0F2F5;
+        border-radius: 8px;
     }
-    QScrollBar:vertical {
-        border: none;
-        background: #F0F0F0;
-        width: 10px;
-        margin: 0px;
-        border-radius: 5px;
-    }
-    QScrollBar::handle:vertical {
-        background: #BBBBBB;
-        min-height: 20px;
-        border-radius: 5px;
-    }
-    QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
-        background: none;
-    }
-    QScrollBar:horizontal {
-        border: none;
-        background: #F0F0F0;
-        height: 10px;
-        margin: 0px;
-        border-radius: 5px;
-    }
-    QScrollBar::handle:horizontal {
-        background: #BBBBBB;
-        min-width: 20px;
-        border-radius: 5px; 
-    }
-    QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
-        background: none;
-    }
-
-"""
+""" + scrollbar_style
 
 button_style = """
     QPushButton {
         background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
-                                          stop:0 rgba(180, 180, 180, 1), stop:1 rgba(140, 140, 140, 1));
-        border: 1px solid #BBBBBB;
-        border-radius: 8px;
+                                          stop:0 #F0F2F5, stop:0.5 #7f7f7f, stop:1 #F0F2F5);
+        border: 0px solid #BBBBBB;
+        border-radius: 20px;
         color: #000000;  /* 更黑亮的文本颜色 */
         font-size: 16px;
         font-weight: bold;
@@ -260,19 +256,20 @@ button_style = """
         text-decoration: none;
         margin: 4px 2px;
         box-shadow: 3px 3px 5px rgba(0, 0, 0, 0.1);
+        transition: background-color 300ms ease-in-out;
     }
 
     QPushButton:hover {
         background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
-                                          stop:0 rgba(140, 140, 140, 1), stop:1 rgba(100, 100, 100, 1));
-        border: 1px solid #AAAAAA;
+                                  stop:0 #7f7f7f, stop:0.5 #F0F2F5, stop:1 #7f7f7f);
+        border: 0px solid #AAAAAA;
     }
 
     QPushButton:pressed {
         background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
-                                          stop:0 rgba(100, 100, 100, 1), stop:1 rgba(80, 80, 80, 1));
-        border: 1px solid #999999;
-        box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+                                  stop:0 #7f7f7f, stop:0.5 #F0F2F5, stop:1 #7f7f7f);
+        border: 0px solid #AAAAAA;
+
     }
 """
 
@@ -330,37 +327,21 @@ hebing_button_style = """
                 box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
             }
         """
-# 夜间模式样式
+
 # 定义显示区域的样式表
+
+# 夜间模式样式
 display_area_style_night = """
     QTextEdit {
-        border: 1px solid #555555;
+        border: 0px solid #555555;
         border-radius: 8px;
-        background-color: #111111;
-        font-family: 'Courier New', monospace;
+        background-color: #000000;
+        font-family: 'Sarasa Gothic', 'Consolas', 'Courier New', sans-serif;
         font-size: 14px;
         color: #EEEEEE;
         padding: 10px;
     }
-    QScrollBar:vertical, QScrollBar:horizontal {
-        border: none;
-        background: #222222;
-        width: 10px;
-        height: 10px;
-        margin: 0px;  /* 解决错位问题 */
-        border-radius: 5px;
-    }
-    QScrollBar::handle:vertical, QScrollBar::handle:horizontal {
-        background: #777777;
-        min-height: 20px;
-        min-width: 20px;
-        border-radius: 5px;
-    }
-    QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical,
-    QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
-        background: none;
-    }
-"""
+""" + scrollbar_style_night
 
 # 定义 QMessageBox 的样式表
 message_box_style_night = """
@@ -390,94 +371,95 @@ QMessageBox QPushButton:hover {
 """
 
 list_widget_style_night = """
-    /* 对 QListWidget 整体进行样式设置，用于夜间模式 */
     QListWidget {
-        border: 1px solid #555555;  /* 设置列表控件的边框宽度为 1 像素，颜色为深灰色 */
-        border-radius: 8px;  /* 设置列表控件的边框圆角半径为 8 像素，使边角呈现圆润效果 */
-        background-color: #222222;  /* 将列表控件的背景颜色设置为深灰色，适配夜间模式 */
-        font-size: 14px;  /* 设置列表控件内文本的字体大小为 14 像素 */
-        color: #EEEEEE;  /* 设置列表控件内文本的颜色为浅灰色，在深色背景下更易读 */
+        border: 0px solid #555555;
+        border-radius: 8px;
+        background-color: #000000;
+        font-family: 'Comic Sans MS', 'KaiTi', sans-serif;
+        font-size: 16px;
+        font-weight: bold;
+        color: #000000;
     }
-    /* 对 QListWidget 中的每个列表项进行样式设置 */
     QListWidget::item {
-        padding: 10px;  /* 设置列表项的内边距为 10 像素，使列表项内的内容与边框有一定间隔 */
-        white-space: nowrap;  /* 使列表项内的文本不自动换行，保持单行显示 */
+        padding: 12px 10px;
+        height: 26px;
     }
-    /* 对鼠标悬停在 QListWidget 列表项上时的样式进行设置 */
     QListWidget::item:hover {
-        background-color: #444444;  /* 当鼠标悬停在列表项上时，背景颜色变为稍浅一些的深灰色 */
-        border-radius: 8px;  /* 鼠标悬停时，列表项的边框圆角半径保持为 8 像素 */
+        background-color: #444444;
+        border-radius: 8px;
     }
-    /* 对 QListWidget 中被选中的列表项进行样式设置 */
     QListWidget::item:selected {
-        background-color: #555555;  /* 被选中的列表项背景颜色变为更深一点的灰色 */
-        color: #FFFFFF;  /* 被选中的列表项文本颜色设置为白色，突出显示 */
-        font-weight: bold;  /* 被选中的列表项文本字体加粗，进一步强调选中状态 */
+        background-color: #555555;
+        color: #FFFFFF;
+        font-weight: bold;
     }
-    /* 对 QListWidget 列表项获得焦点时的样式进行设置，去除默认的焦点轮廓 */
     QListWidget::item:focus {
         outline: none;
     }
-    /* 对 QListWidget 控件本身获得焦点时的样式进行设置，去除默认的焦点轮廓 */
     QListWidget:focus {
         outline: none;
     }
-"""
+""" + scrollbar_style_night
 
 dialog_style_night = """
 QDialog {
-    background-color: #222222;  /* 深灰色背景 */
-    border-radius: 15px;  /* 圆角 */
-    padding: 30px;  /* 内边距 */
+    background-color: #222222;
+    font-family: 'Sarasa Gothic', 'Consolas', 'Courier New', sans-serif;
+    border-radius: 15px;
+    padding: 30px;
 }
 QLabel {
-    font-size: 20px;  /* 标签字体大小 */
-    color: #EEEEEE;  /* 标签字体颜色 */
-    margin-bottom: 10px;  /* 标签底部外边距 */
+    font-size: 20px;
+    color: #EEEEEE;
+    margin-bottom: 10px;
 }
 QPushButton {
-    background-color: #0078d7;  /* 按钮背景颜色 */
-    color: white;  /* 按钮字体颜色 */
-    padding: 12px 25px;  /* 按钮内边距 */
-    border: none;  /* 无边框 */
-    border-radius: 10px;  /* 按钮圆角 */
-    font-size: 16px;  /* 按钮字体大小 */
-    margin: 5px 0;  /* 按钮外边距 */
+    background-color: #0078d7;
+    color: white;
+    padding: 12px 25px;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    margin: 5px 0;
 }
 QPushButton:hover {
-    background-color: #0056b3;  /* 按钮悬停背景颜色 */
+    background-color: #0056b3;
 }
 """
 
 search_edit_style_night = """
     QLineEdit {
-        border: 1px solid #555555;
+        background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
+                                          stop:0 #ffffff, stop:1 #000000);
+        border: 0px solid #555555;
         border-radius: 25px;
         padding: 5px;
+        font-family: 'Comic Sans MS', 'KaiTi', sans-serif;
         font-size: 23px;
-        font-weight: bold;  /* 输入字体加粗 */
+        font-weight: bold;
         min-width: 100px;
-        height:70px;
-        background-color: #222222;
+        height: 70px;
         color: #EEEEEE;
     }
     QLineEdit:focus {
-        border: 3px solid #777777;
-        background-color: #222222;
+        border: 0px solid #A0A0A0;
+        background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
+                                          stop:0 #000000, stop:1 #ffffff);
     }
     QLineEdit::placeholder {
         color: #AAAAAA;
         font-size: 18px;
-        font-style: italic;  /* 提示文字保持斜体 */
+        font-style: italic;
     }
 """
 
 completer_popup_style_night = """
     QListView {
-        font-size: 18px;  /* 调整字体大小 */
+        font-family: 'Sarasa Gothic', 'Consolas', 'Courier New', sans-serif;
+        font-size: 18px;
         padding: 8px;
-        min-width: 300px;  /* 增加最小宽度 */
-        min-height: 250px;  /* ✅ 增加预览框的最小高度 */
+        min-width: 300px;
+        min-height: 250px;
         background-color: #222222;
         color: #EEEEEE;
     }
@@ -493,6 +475,10 @@ main_window_style_night = """
 """
 
 left_widget_style_night = """
+    QWidget {
+        background-color: #000000;
+        border-radius: 8px;
+    }
     QTextEdit {
         border: 1px solid #555555;
         border-radius: 8px;
@@ -502,34 +488,15 @@ left_widget_style_night = """
         color: #EEEEEE;
         padding: 10px;
     }
-    QScrollBar:vertical, QScrollBar:horizontal {
-        border: none;
-        background: #222222;
-        width: 10px;
-        height: 10px;
-        margin: 0px;  /* 解决错位问题 */
-        border-radius: 5px;
-    }
-    QScrollBar::handle:vertical, QScrollBar::handle:horizontal {
-        background: #777777;
-        min-height: 20px;
-        min-width: 20px;
-        border-radius: 5px;
-    }
-    QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical,
-    QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
-        background: none;
-    }
-
-"""
+""" + scrollbar_style_night
 
 button_style_night = """
     QPushButton {
         background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
-                                          stop:0 rgba(80, 80, 80, 1), stop:1 rgba(40, 40, 40, 1));
-        border: 1px solid #555555;
-        border-radius: 8px;
-        color: #FFFFFF;  /* 更亮的文本颜色 */
+                                          stop:0 #000000, stop:0.5 #ffffff, stop:1 #000000);
+        border: 0px solid #555555;
+        border-radius: 20px;
+        color: #000000;  /* 更亮的文本颜色 */
         font-size: 16px;
         font-weight: bold;
         padding: 12px 25px;
@@ -537,19 +504,21 @@ button_style_night = """
         text-decoration: none;
         margin: 4px 2px;
         box-shadow: 3px 3px 5px rgba(0, 0, 0, 0.3);
+        transition: background-color 300ms ease-in-out;
     }
 
     QPushButton:hover {
         background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
-                                          stop:0 rgba(40, 40, 40, 1), stop:1 rgba(20, 20, 20, 1));
-        border: 1px solid #444444;
+                                          stop:0 #F0F2F5, stop:0.5 #7f7f7f, stop:1 #F0F2F5);
+        border: 0px solid #444444;
     }
 
     QPushButton:pressed {
         background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
-                                          stop:0 rgba(20, 20, 20, 1), stop:1 rgba(10, 10, 10, 1));
-        border: 1px solid #333333;
-        box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+                                          stop:0 #F0F2F5, stop:0.5 #7f7f7f, stop:1 #F0F2F5);
+        border: 0px solid #444444;
+
+
     }
 """
 
@@ -635,10 +604,12 @@ ICON_EXECUTOR = ThreadPoolExecutor(max_workers=50)
 # 默认图标路径
 DEFAULT_ICON_PATH = get_resource_path("imge.png")
 # 夜间模式标志
+
 night_mode = False  # Add this line
 left_widget = None  # 新增全局变量声明
 original_english_btn_style = None  # 已存在
 original_night_mode_btn_style = None  # 新增全局变量声明
+title_bar = None  # 新增全局变量声明
 
 
 def get_dynamic_favicon(url):
@@ -1090,13 +1061,72 @@ class MyDelegate(QStyledItemDelegate):
 
 
 def animate_search_edit_height(target_height):
-    animation = QPropertyAnimation(search_edit, b"minimumHeight")
-    animation.setDuration(700)  # 动画时长 300 毫秒
-    animation.setStartValue(search_edit.height())
-    animation.setEndValue(target_height)
-    animation.start()
-    # 保存引用，防止动画被垃圾回收
-    search_edit.animation = animation
+    global search_edit
+    from PyQt5.QtCore import QParallelAnimationGroup, QPropertyAnimation, QEasingCurve, QRect
+
+    # 停止现有动画
+    if hasattr(search_edit, 'animation') and search_edit.animation:
+        search_edit.animation.stop()
+        search_edit.animation.deleteLater()
+
+    # 判断是放大还是缩小
+    is_expanding = target_height > search_edit.height()
+
+    # 高度动画
+    height_animation = QPropertyAnimation(search_edit, b"minimumHeight")
+    height_animation.setDuration(1000)
+    height_animation.setStartValue(search_edit.height())
+    height_animation.setEndValue(target_height)
+    height_animation.setEasingCurve(QEasingCurve.OutElastic if is_expanding else QEasingCurve.InElastic)
+
+    # 缩放动画
+    scale_animation = QPropertyAnimation(search_edit, b"geometry")
+    scale_animation.setDuration(1000)
+    current_geometry = search_edit.geometry()
+    scale_factor = 1.0 if is_expanding else 1.0
+    target_width = int(current_geometry.width() * scale_factor)
+    target_geometry = QRect(
+        current_geometry.x() - int((target_width - current_geometry.width()) / 2),
+        current_geometry.y(),
+        target_width,
+        target_height
+    )
+    scale_animation.setStartValue(current_geometry)
+    scale_animation.setEndValue(target_geometry)
+    scale_animation.setEasingCurve(QEasingCurve.OutElastic if is_expanding else QEasingCurve.InElastic)
+
+    # 抖动动画
+    shake_animation = QPropertyAnimation(search_edit, b"pos")
+    shake_animation.setDuration(0)
+    current_pos = search_edit.pos()
+    shake_animation.setStartValue(current_pos)
+    if is_expanding:
+        shake_animation.setKeyValueAt(0.3, current_pos + QPoint(4, 0))
+        shake_animation.setKeyValueAt(0.6, current_pos + QPoint(-4, 0))
+    else:
+        shake_animation.setKeyValueAt(0.3, current_pos + QPoint(-4, 0))
+        shake_animation.setKeyValueAt(0.6, current_pos + QPoint(4, 0))
+    shake_animation.setEndValue(current_pos)
+    shake_animation.setEasingCurve(QEasingCurve.OutElastic if is_expanding else QEasingCurve.InElastic)
+
+    # 透明度动画（调整为更温和）
+    opacity_animation = QPropertyAnimation(search_edit, b"windowOpacity")
+    opacity_animation.setDuration(600)
+    opacity_animation.setStartValue(1.0)  # 从完全不透明开始
+    opacity_animation.setKeyValueAt(0.4, 0.97)  # 更温和的透明度变化
+    opacity_animation.setEndValue(1.0)
+    opacity_animation.setEasingCurve(QEasingCurve.InOutQuad)
+
+    # 并行动画组
+    animation_group = QParallelAnimationGroup()
+    animation_group.addAnimation(height_animation)
+    animation_group.addAnimation(scale_animation)
+    animation_group.addAnimation(shake_animation)
+    animation_group.addAnimation(opacity_animation)
+    animation_group.start()
+
+    # 保存引用
+    search_edit.animation = animation_group
 
 
 def tr(message):
@@ -1134,21 +1164,248 @@ def update_status_bar(widget_name):
     else:
         status_bar.setText(">>> 准备就绪 🚀")
 
+def handle_hover_search_edit(obj, event):
+    if english_mode:  # 如果处于英语模式，禁止悬浮动画
+        return False
+    if event.type() == QEvent.Enter:
+        # 鼠标进入搜索框区域，执行“略微变高”的泡泡动画
+        if hasattr(obj, 'animation') and obj.animation:
+            obj.animation.stop()
+        animate_search_edit_height(120)  # 比原来小一点的膨胀高度
+    elif event.type() == QEvent.Leave:
+        # 鼠标离开，恢复原始高度
+        if hasattr(obj, 'animation') and obj.animation:
+            obj.animation.stop()
+        animate_search_edit_height(70)
+    return False
+
+
+from PyQt5.QtGui import QPainterPath
+
+
+def set_inverted_rounded_corners(widget, radius=5.0, antialiasing_level=2, smoothness=2.0, supersampling=4.0, debug_border=False):
+    """
+    为窗口设置极平滑的倒圆角效果，使用超采样和边缘渐变消除毛刺。
+
+    参数:
+        widget: 要设置倒圆角的控件对象
+        radius: 圆角半径（像素，支持浮点数），默认值为20.0
+        antialiasing_level: 抗锯齿级别，0（关闭）、1（标准）、2（高质量），默认值为2
+        smoothness: 路径平滑度因子（0.5~2.0），值越大越平滑，默认值为1.0
+        supersampling: 超采样倍率（1.0~4.0），值越大边缘越平滑但性能开销更高，默认值为1.5
+        debug_border: 是否绘制调试边框以验证圆角路径，默认值为False
+
+    注意:
+        - supersampling=1.5 适合大多数场景，降低性能开销
+        - 在高 DPI 屏幕上，自动调整超采样以优化效果
+        - debug_border=True 可显示红色边框以检查圆角效果
+    """
+    from PyQt5.QtGui import QPainterPath, QRegion, QPainter, QPixmap, QBrush, QLinearGradient, QPen, QColor
+    from PyQt5.QtCore import QRectF, Qt
+    from PyQt5.QtWidgets import QApplication
+
+    # 获取控件尺寸
+    width = widget.width()
+    height = widget.height()
+
+    # 根据屏幕 DPI 动态调整超采样倍率
+    screen = QApplication.primaryScreen()
+    dpi_scale = screen.logicalDotsPerInch() / 96.0  # 标准 DPI 为 96
+    adjusted_supersampling = min(max(supersampling * dpi_scale, 1.0), 3.0)  # 限制在 1.0~3.0
+
+    # 计算超采样后的画布尺寸
+    render_width = int(width * adjusted_supersampling)
+    render_height = int(height * adjusted_supersampling)
+
+    # 创建高分辨率画布
+    pixmap = QPixmap(render_width, render_height)
+    pixmap.fill(Qt.transparent)
+
+    # 初始化画家
+    painter = QPainter(pixmap)
+    painter.setRenderHint(QPainter.Antialiasing, True)
+    if antialiasing_level >= 1:
+        painter.setRenderHint(QPainter.HighQualityAntialiasing, True)
+    if antialiasing_level == 2:
+        painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
+
+    # 缩放画布以匹配超采样
+    painter.scale(adjusted_supersampling, adjusted_supersampling)
+
+    # 创建平滑的倒圆角路径
+    path = QPainterPath()
+    rect = QRectF(0, 0, width, height)
+    adjusted_radius = radius * smoothness
+
+    # 使用高精度路径
+    path.setFillRule(Qt.WindingFill)
+    path.addRoundedRect(rect, adjusted_radius, adjusted_radius)
+
+    # 绘制主填充区域
+    painter.setPen(Qt.NoPen)
+    painter.setBrush(Qt.black)  # 不透明区域
+    painter.drawPath(path)
+
+    # 绘制边缘渐变以软化边界（减少锯齿）
+    edge_width = 1.0 / adjusted_supersampling  # 边缘渐变宽度（像素）
+    edge_path = QPainterPath()
+    edge_rect = QRectF(edge_width / 2, edge_width / 2, width - edge_width, height - edge_width)
+    edge_path.addRoundedRect(edge_rect, adjusted_radius, adjusted_radius)
+
+    gradient = QLinearGradient(0, 0, edge_width * 2, 0)
+    gradient.setColorAt(0, Qt.transparent)
+    gradient.setColorAt(1, Qt.black)
+    painter.setBrush(QBrush(gradient))
+    painter.setCompositionMode(QPainter.CompositionMode_SourceOver)
+    painter.drawPath(edge_path)
+
+    # 调试边框（可选）
+    if debug_border:
+        painter.setPen(QPen(QColor(Qt.red), 1.0 / adjusted_supersampling))
+        painter.setBrush(Qt.NoBrush)
+        painter.drawPath(path)
+
+    # 结束绘制
+    painter.end()
+
+    # 将画布缩放回原始尺寸并生成遮罩
+    scaled_pixmap = pixmap.scaled(width, height, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+    region = QRegion(scaled_pixmap.createMaskFromColor(Qt.transparent, Qt.MaskInColor))
+    widget.setMask(region)
+
+    # 调试输出
+    print(f"倒圆角渲染完成: 尺寸={width}x{height}, 半径={radius}, "
+          f"调整后半径={adjusted_radius}, 抗锯齿级别={ antialiasing_level}, "
+          f"平滑度={smoothness}, 超采样={adjusted_supersampling}")
 
 def create_main_window():
     global status_bar, list_widget, search_edit, completer_model, display_area
     global create_script_button, remove_selected_button, clear_button, update_log_button
     global english_mode, english_learn_button, original_english_btn_style, night_mode_button
-    global left_widget  # 声明为全局变量
+    global left_widget, network_speed_button, speed_test_timer, main_window
     english_mode = False
 
     main_window = QWidget()
     main_window.setGeometry(100, 100, 1024, 768)
-    main_window.setWindowTitle(tr('Xing_yun(@Rhj_flash)'))
-    main_window.setStyleSheet(main_window_style)
+    main_window.setWindowTitle(tr('Xing_yun V1.0(@Rhj_flash)'))
+    main_window.setWindowFlags(Qt.FramelessWindowHint)
+    main_window.setStyleSheet("""
+        QMainWindow, QWidget {
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);   
+            background-color: #F0F2F5;  /* 背景色 */
+            border: none;  /* 移除边框 */
+        }
+        QSplitter {
+            background-color: #F0F2F5;  /* 确保分割器背景一致 */
+        }
+        QSplitter::handle {
+            background-color: #F0F2F5;  /* 分割器手柄背景 */
+        }
+    """)
     center_window(main_window)
     main_layout = QVBoxLayout()
     main_window.setLayout(main_layout)
+
+    # 设置倒圆角
+    set_inverted_rounded_corners(main_window, radius=20, smoothness=2.0, debug_border=True)  # 启用调试边框
+
+    # 重写 resizeEvent 以在窗口大小变化时更新遮罩
+    def resizeEvent(event):
+        set_inverted_rounded_corners(main_window, radius=10, antialiasing_level=2, smoothness=2.0)
+        QWidget.resizeEvent(main_window, event)
+
+    main_window.resizeEvent = resizeEvent
+
+    # 自定义标题栏
+    global title_bar
+    title_bar = QWidget()
+    title_bar.setFixedHeight(30)
+    title_bar.setStyleSheet("background-color: #F0F2F5; border-top-left-radius: 15px; border-top-right-radius: 15px;")
+
+    title_bar_layout = QHBoxLayout(title_bar)
+    title_bar_layout.setContentsMargins(0, 0, 0, 0)
+    title_bar_layout.setSpacing(0)
+
+    title_label = QLabel(tr('Xing_yun_Win10sys(@Rhj_flash) V-1.0'))
+    title_label.setStyleSheet("""
+        font-family: 'Comic Sans MS', 'KaiTi', sans-serif;
+        font-size: 16px;
+        font-weight: bold;
+        padding-left: 10px;
+    """)
+    title_bar_layout.addWidget(title_label)
+    title_bar_layout.addStretch()
+
+    # 最小化按钮
+    min_button = QPushButton("—")  # 使用标准 Unicode 最小化图标
+    min_button.setFixedSize(35, 35)
+    min_button.setStyleSheet("""
+        QPushButton {
+            font-size: 15px;  /* 调整字体大小以优化显示 */
+            padding: 0px;     /* 移除内边距，确保居中 */
+           
+            text-align: center; /* 强制文本/图标居中 */
+        }
+    """)
+    min_button.clicked.connect(main_window.showMinimized)
+    title_bar_layout.addWidget(min_button)
+
+    # 最大化/还原按钮
+    max_button = QPushButton("⚁")  # 使用更标准的图标表示
+    max_button.setFixedSize(30, 30)
+    max_button.setStyleSheet("""
+            QPushButton {
+                font-size: 18px;  /* 调整字体大小以优化显示 */
+                padding: 0px;     /* 移除内边距，确保居中 */
+                text-align: center; /* 强制文本/图标居中 */
+            }
+        """)
+
+    def toggle_maximize():
+        if main_window.isMaximized():
+            main_window.showNormal()
+            max_button.setText("⚁")
+        else:
+            main_window.showMaximized()
+            max_button.setText("🗗")  # 还原图标
+    max_button.clicked.connect(toggle_maximize)
+    title_bar_layout.addWidget(max_button)
+
+    # 关闭按钮
+    close_button = QPushButton("×")  # 使用更标准的图标表示
+    close_button.setFixedSize(30, 34)
+    close_button.setStyleSheet("""
+                QPushButton {
+                    font-size: 18px;  /* 调整字体大小以优化显示 */
+                    padding: 0px;     /* 移除内边距，确保居中 */
+                    text-align: center; /* 强制文本/图标居中 */
+                }
+            """)
+    close_button.clicked.connect(main_window.close)
+    title_bar_layout.addWidget(close_button)
+
+    main_layout.addWidget(title_bar)
+
+    # 允许拖动窗口
+    main_window.old_pos = None
+
+    def mousePressEvent(event):
+        if event.button() == Qt.LeftButton:
+            main_window.old_pos = event.globalPos()
+
+    def mouseReleaseEvent(event):
+        if event.button() == Qt.LeftButton:
+            main_window.old_pos = None
+
+    def mouseMoveEvent(event):
+        if not main_window.old_pos: return
+        delta = event.globalPos() - main_window.old_pos
+        main_window.move(main_window.pos() + delta)
+        main_window.old_pos = event.globalPos()
+
+    main_window.mousePressEvent = mousePressEvent
+    main_window.mouseReleaseEvent = mouseReleaseEvent
+    main_window.mouseMoveEvent = mouseMoveEvent
 
     # 设置图标
     icon_path = get_resource_path('imge.png')
@@ -1160,15 +1417,29 @@ def create_main_window():
     # 添加状态栏
     status_bar = QLabel(tr(">>> 准备就绪🚀"))
     status_bar.setStyleSheet("""
+        font-family: 'Sarasa Gothic', 'Consolas', 'Courier New', sans-serif;
         font-size: 12px;
         color: #444444;
         padding: 2px 8px;
         border-top: 1px solid #CCCCCC;
+        border-radius: 8px;
     """)
+
+
+
     status_bar.setAlignment(Qt.AlignLeft)
     status_bar.setFixedHeight(30)
-    status_bar.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+    status_bar.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)  # 修改尺寸策略为固定
+    status_bar.setMaximumWidth(1800)  # 设置最大宽度，防止过长文本拉伸
+    status_bar.setWordWrap(False)  # 禁用自动换行
 
+    # 添加文本截断逻辑
+    def truncate_text(text, max_length=100):
+        if len(text) > max_length:
+            return text[:max_length - 3] + "..."
+        return text
+
+    status_bar.setText = lambda text: QLabel.setText(status_bar, truncate_text(text))  # 重写setText方法
     # 添加 "英语角" 按钮
     english_learn_button = QPushButton("  💃  ")
     original_english_btn_style = """
@@ -1197,16 +1468,20 @@ def create_main_window():
             box-shadow: 1px 1px 1px rgba(0, 0, 0, 0.1);
         }
     """
+    # 尝试断开旧连接，避免重复连接导致的问题
     try:
-        english_learn_button.clicked.disconnect()
-    except Exception:
+        # 检查是否已经连接，避免重复断开导致TypeError
+        if english_learn_button.clicked.disconnect:
+            english_learn_button.clicked.disconnect()
+    except TypeError:
+        # 如果没有连接，则忽略TypeError
         pass
     english_learn_button.clicked.connect(toggle_english_mode)
     english_learn_button.setStyleSheet(original_english_btn_style)
     english_learn_button.setFixedSize(32, 32)
 
-    # 添加夜间模式按钮（初始化为太阳图标）
-    night_mode_button = QPushButton("  ☀️  ")  # 修改为太阳图标
+    # 添加夜间模式按钮
+    night_mode_button = QPushButton("  🌞  ")
     night_mode_button_style = """
         QPushButton {
             background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
@@ -1233,13 +1508,396 @@ def create_main_window():
             box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
         }
     """
+    # 尝试断开旧连接，避免重复连接导致的问题
     try:
-        night_mode_button.clicked.disconnect()
-    except Exception:
+        # 检查是否已经连接，避免重复断开导致TypeError
+        if night_mode_button.clicked.disconnect:
+            night_mode_button.clicked.disconnect()
+    except TypeError:
+        # 如果没有连接，则忽略TypeError
         pass
     night_mode_button.clicked.connect(toggle_night_mode)
     night_mode_button.setStyleSheet(night_mode_button_style)
     night_mode_button.setFixedSize(32, 32)
+
+    # 网速测试按钮
+    network_speed_button = QPushButton("  📡  ")
+    network_speed_button.setIconSize(QSize(16, 16))
+    original_network_speed_btn_style = """
+        QPushButton {
+            background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
+                                              stop:0 rgba(200, 200, 200, 1), stop:1 rgba(160, 160, 160, 1));
+            border: 1px solid #BBBBBB;
+            border-radius: 8px;
+            color: #222222;
+            font-size: 14px;
+            font-weight: bold;
+            padding: 2px 8px;
+            text-align: center;
+            margin: 0;
+            box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+        }
+        QPushButton:hover {
+            background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
+                                              stop:0 rgba(160, 160, 160, 1), stop:1 rgba(120, 120, 120, 1));
+            border: 1px solid #AAAAAA;
+        }
+        QPushButton:pressed {
+            background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
+                                              stop:0 rgba(120, 120, 120, 1), stop:1 rgba(90, 90, 90, 1));
+            border: 1px solid #999999;
+            box-shadow: 1px 1px 1px rgba(0, 0, 0, 0.1);
+        }
+    """
+    network_speed_button.setStyleSheet(original_network_speed_btn_style)
+    network_speed_button.setFixedSize(32, 32)
+    network_speed_button.is_active = False
+
+    speed_test_timer = None
+    last_bytes_sent = 0
+    last_bytes_recv = 0
+    last_time = time.time()
+    max_download_speed = 0.0
+    min_download_speed = float('inf')
+    max_upload_speed = 0.0
+    min_upload_speed = float('inf')
+
+    def run_speed_test():
+        """实时获取 WiFi 和网络的详细信息，呈现生动、直观的网络状态"""
+        global last_bytes_sent, last_bytes_recv, last_time
+        global max_download_speed, min_download_speed, max_upload_speed, min_upload_speed
+
+        # 确保全局变量已初始化
+        try:
+            if 'max_download_speed' not in globals():
+                globals()['max_download_speed'] = 0.0
+            if 'min_download_speed' not in globals():
+                globals()['min_download_speed'] = float('inf')
+            if 'max_upload_speed' not in globals():
+                globals()['max_upload_speed'] = 0.0
+            if 'min_upload_speed' not in globals():
+                globals()['min_upload_speed'] = float('inf')
+        except Exception as e:
+            display_area.clear()
+            display_area.append(f"❌ 全局变量初始化失败: {e}")
+            update_status_bar("网络测试失败: 变量初始化错误")
+            return
+
+        try:
+            # 调用 get_wifi_info 获取 WiFi 信息
+            from function import get_wifi_info
+            wifi_info = get_wifi_info()
+
+            # 检查 get_wifi_info 返回值
+            if wifi_info is None or wifi_info == "WiFi信息: 获取失败":
+                display_area.clear()
+                display_area.append("📡 网络信息获取失败\n⚠️ 无法获取 WiFi 信息，请检查网络连接或管理员权限！")
+                update_status_bar("网络测试失败: 无法获取 WiFi 信息")
+                return
+            if not isinstance(wifi_info, str):
+                display_area.clear()
+                display_area.append(f"📡 网络信息获取失败\n⚠️ WiFi 信息格式错误: {type(wifi_info)}")
+                update_status_bar("网络测试失败: WiFi 信息格式错误")
+                return
+
+            # 提取当前 WiFi 的 SSID 和密码等信息
+            import re
+            current_network_match = re.search(r"当前WiFi名称: (.+?)(?=\n|$)", wifi_info)
+            password_match = re.search(r"当前WiFi密码: (.+?)(?=\n|$)", wifi_info)
+            network_type_match = re.search(r"网络类型: (.+?)(?=\n|$)", wifi_info)
+            auth_match = re.search(r"认证方式: (.+?)(?=\n|$)", wifi_info)
+            cipher_match = re.search(r"加密方式: (.+?)(?=\n|$)", wifi_info)
+
+            if not current_network_match:
+                display_area.clear()
+                display_area.append(
+                    f"📡 网络信息获取失败\n⚠️ 无法提取 WiFi 名称，请检查 WiFi 是否连接！\n调试信息: {wifi_info[:100]}...")
+                update_status_bar("网络测试失败: 无法提取 WiFi 名称")
+                return
+
+            current_network = current_network_match.group(1).strip()
+            password = password_match.group(1).strip() if password_match else "未知"
+            network_type = network_type_match.group(1).strip() if network_type_match else "未知"
+            authentication = auth_match.group(1).strip() if auth_match else "未知"
+            encryption = cipher_match.group(1).strip() if cipher_match else "未知"
+
+            # 从 netsh wlan show interfaces 获取 WiFi 详细信息
+            import subprocess
+            try:
+                output = subprocess.check_output(
+                    ['netsh', 'wlan', 'show', 'interfaces'],
+                    encoding='utf-8',
+                    creationflags=subprocess.CREATE_NO_WINDOW,
+                    stderr=subprocess.PIPE
+                )
+            except subprocess.CalledProcessError as e:
+                display_area.clear()
+                display_area.append(f"📡 网络信息获取失败\n❌ 执行 netsh 命令失败: {e.stderr}")
+                update_status_bar("网络测试失败: netsh 命令错误")
+                return
+
+            # 提取连接状态
+            state_match = re.search(r"State\s*:\s*([^\r\n]+)", output)
+            connection_state = state_match.group(1).strip() if state_match else "未连接"
+
+            # 初始化返回值
+            actual_download = 0.0
+            actual_upload = 0.0
+            receive_rate = 0.0
+            transmit_rate = 0.0
+            signal_strength = 0
+            protocol = "未知"
+            channel = 0
+            frequency = "未知"
+            max_bandwidth = 0.0
+            channel_width = "未知"
+            mac_address = "未知"
+            ip_address = "未知"
+            gateway = "未知"
+
+            if connection_state.lower() == "connected":
+                # 计算实际网速
+                import psutil
+                import time
+                net_io = psutil.net_io_counters()
+                bytes_sent = net_io.bytes_sent
+                bytes_recv = net_io.bytes_recv
+                current_time = time.time()
+                time_diff = current_time - last_time if last_time else 0.5
+                if time_diff < 0.1:
+                    time_diff = 0.5
+
+                actual_download = ((bytes_recv - last_bytes_recv) * 8 / time_diff) / 1_000_000  # Mbps
+                actual_upload = ((bytes_sent - last_bytes_sent) * 8 / time_diff) / 1_000_000  # Mbps
+                actual_download = max(0, actual_download)
+                actual_upload = max(0, actual_upload)
+
+                # 更新上次数据
+                last_bytes_sent = bytes_sent
+                last_bytes_recv = bytes_recv
+                last_time = current_time
+
+                # 提取理论速率
+                receive_rate_match = re.search(r"Receive rate\s*:\s*([\d.]+)", output)
+                transmit_rate_match = re.search(r"Transmit rate\s*:\s*([\d.]+)", output)
+                receive_rate = float(receive_rate_match.group(1)) if receive_rate_match else 0.0
+                transmit_rate = float(transmit_rate_match.group(1)) if transmit_rate_match else 0.0
+
+                # 提取信号强度
+                signal_match = re.search(r"Signal\s*:\s*(\d+)%", output)
+                signal_strength = int(signal_match.group(1)) if signal_match else 0
+
+                # 提取协议
+                protocol_match = re.search(r"Radio type\s*:\s*([^\r\n]+)", output)
+                protocol = protocol_match.group(1).strip() if protocol_match else "未知"
+
+                # 提取频道
+                channel_match = re.search(r"Channel\s*:\s*(\d+)", output)
+                channel = int(channel_match.group(1)) if channel_match else 0
+
+                # 提取频率
+                frequency = "2.4 GHz" if 1 <= channel <= 14 else "5 GHz" if channel > 14 else "未知"
+
+                # 推算设备最大带宽
+                max_bandwidth = 0.0
+                if protocol == "802.11n":
+                    max_bandwidth = 300.0 if frequency == "5 GHz" else 150.0
+                elif protocol == "802.11ac":
+                    max_bandwidth = 1300.0 if frequency == "5 GHz" else 600.0
+                elif protocol == "802.11ax":
+                    max_bandwidth = 2400.0 if frequency == "5 GHz" else 600.0
+
+                # 提取频道宽度
+                channel_width_match = re.search(r"Channel Width\s*:\s*([^\r\n]+)", output)
+                channel_width = channel_width_match.group(1).strip() if channel_width_match else "未知"
+
+                # 提取MAC地址
+                mac_match = re.search(r"Physical address\s*:\s*([^\r\n]+)", output)
+                mac_address = mac_match.group(1).strip() if mac_match else "未知"
+
+                # 获取IP地址、网关和DNS
+                try:
+                    ipconfig_output = subprocess.check_output(
+                        ['ipconfig', '/all'],
+                        encoding='utf-8',
+                        creationflags=subprocess.CREATE_NO_WINDOW,
+                        stderr=subprocess.PIPE
+                    )
+                    ip_match = re.search(r"IPv4 Address.*?:\s*([\d.]+)", ipconfig_output)
+                    ip_address = ip_match.group(1).strip() if ip_match else "未知"
+
+                    gateway_match = re.search(r"Default Gateway.*?:\s*([\d.]+)", ipconfig_output)
+                    gateway = gateway_match.group(1).strip() if gateway_match else "未知"
+
+                except subprocess.CalledProcessError as e:
+                    display_area.append(f"⚠️ 获取 IP 信息失败: {e.stderr}")
+
+                # 更新最大和最小速度
+                max_download_speed = max(max_download_speed, actual_download)
+                min_download_speed = min(min_download_speed,
+                                         actual_download) if actual_download > 0 else min_download_speed
+                max_upload_speed = max(max_upload_speed, actual_upload)
+                min_upload_speed = min(min_upload_speed, actual_upload) if actual_upload > 0 else min_upload_speed
+
+            # 生成生动的信号强度描述
+            signal_description = (
+
+                "📶📶📶" if signal_strength >= 80 else
+                "📶📶" if signal_strength >= 50 else
+                "📶" if signal_strength >= 20 else
+                "🚨 信号微弱，连接可能不稳定！"
+            )
+            # 更新状态栏显示
+            status_text = (
+                f"📡 {current_network} | {connection_state} | "
+                f"↓ {actual_download:.2f} Mbps | ↑ {actual_upload:.2f} Mbps"
+            )
+            if len(status_text) > 70:  # 限制状态栏文本长度
+                status_text = status_text[:70] + "..."
+            update_status_bar(status_text)
+
+            # 显示详细信息到显示区域
+            from datetime import datetime
+            display_area.clear()
+            display_area.append(f"📡🔴网络测试开始 ")
+            display_area.append(
+                f"   连接到: {current_network} {'✅ 已连接' if connection_state.lower() == 'connected' else '❌ 未连接'}")
+            display_area.append(f"   密码🔒: {password}")
+            display_area.append(f"   信号强度:  {signal_strength}% {signal_description}")
+            display_area.append("————————————————————————————————————————————————————————————————————————————————————————")
+
+            display_area.append("⚡ 网速与性能")
+            display_area.append(f"    下载速度: {actual_download:.2f} Mbps ↓")
+            display_area.append(f"    上传速度: {actual_upload:.2f} Mbps ↑")
+            min_download_display = min_download_speed if min_download_speed != float('inf') else 0
+            display_area.append(f"    最大下载速度: {max_download_speed:.2f} Mbps")
+            display_area.append(f"    最小下载速度: {min_download_display:.2f} Mbps")
+            min_upload_display = min_upload_speed if min_upload_speed != float('inf') else 0
+            display_area.append(f"    最大上传速度: {max_upload_speed:.2f} Mbps")
+            display_area.append(f"    最小上传速度: {min_upload_display:.2f} Mbps")
+            display_area.append(f"    理论下载速率: {receive_rate:.1f} Mbps")
+            display_area.append(f"    理论上传速率: {transmit_rate:.1f} Mbps")
+            display_area.append("————————————————————————————————————————————————————————————————————————————————————————")
+
+            display_area.append("🔧 网络技术细节")
+            display_area.append(f"    网络类型: {network_type}")
+            display_area.append(f"    协议: {protocol}")
+            display_area.append(f"    频率: {frequency}")
+            display_area.append(f"    信道: {channel}")
+            display_area.append(f"    最大带宽: {max_bandwidth:.1f} Mbps")
+            display_area.append(f"    信道宽度: {channel_width}")
+            display_area.append(f"    认证方式: {authentication}")
+            display_area.append(f"    加密方式: {encryption}")
+            display_area.append("————————————————————————————————————————————————————————————————————————————————————————")
+
+            display_area.append("🌍 连接信息")
+            display_area.append(f"    MAC地址: {mac_address}")
+            display_area.append(f"    IP地址: {ip_address}")
+            display_area.append(f"    网关: {gateway}")
+
+
+
+
+        except Exception as e:
+            display_area.clear()
+            display_area.append(f"📡 网络信息获取失败\n⚠️ 错误: {str(e)}")
+            update_status_bar("网络测试失败: 获取信息出错")
+
+    def update_speed_display():
+        """实时更新网络和 WiFi 信息显示（中文）"""
+        try:
+            actual_download, actual_upload, receive_rate, transmit_rate, network_name, signal_strength, protocol, channel, frequency, max_bandwidth, encryption, channel_width, mac_address, ip_address, gateway, dns_servers, connection_state, error = run_speed_test()
+            if error is None:
+                speed_text = (
+                    f"\n"
+                    f"\n"
+                    f"\n"
+                    f"📶 WiFi 名称：{network_name}\n"
+                    f"🔗 连接状态：{connection_state}\n"
+                    f"📥 实际下载速度：{actual_download:.2f} Mbps\n"
+                    f"📤 实际上传速度：{actual_upload:.2f} Mbps\n"
+                    f"📊 理论最大下载速度：{receive_rate:.2f} Mbps\n"
+                    f"📈 理论最大上传速度：{transmit_rate:.2f} Mbps\n"
+                    f"📡 信号强度：{signal_strength}% {'📶' * (signal_strength // 25)}\n"
+                    f"🌐 WiFi 协议：{protocol}\n"
+                    f"🔢 频道：{channel} ({frequency})\n"
+                    f"📏 信道宽度：{channel_width}\n"
+                    f"⚡ 设备最大带宽：{max_bandwidth:.2f} Mbps\n"
+                    f"🔒 加密类型：{encryption}\n"
+                    f"📌 MAC 地址：{mac_address}\n"
+                    f"🌍 IP 地址：{ip_address}\n"
+                    f"🚪 网关地址：{gateway}\n"
+                    f"🔍 DNS 服务器：{dns_servers}\n"
+                    f"⏰ 更新时间：{QDateTime.currentDateTime().toString('yyyy-MM-dd hh:mm:ss')}\n"
+                    f"\n"
+                    f"\n"
+                    f"\n"
+                )
+                # 清空显示区域，防止日志堆积
+                display_area.clear()
+                appendLogWithEffect(display_area, speed_text)
+            else:
+                appendLogWithEffect(display_area, f"{error}\n")
+        except Exception as e:
+            appendLogWithEffect(display_area, f"\n")
+
+    def toggle_network_speed():
+        """切换网速测试状态，支持实时刷新"""
+        global speed_test_timer, last_bytes_sent, last_bytes_recv, last_time
+        try:
+            network_speed_button.is_active = not network_speed_button.is_active
+
+            # 需要保留启用状态的控件
+            allowed_widgets = {
+                network_speed_button,
+                display_area,
+            }
+
+            # 禁用其他控件（仅禁用 QPushButton 和 QLineEdit 等用户交互控件）
+            for widget in main_window.findChildren(QWidget):
+                if isinstance(widget,
+                              (QPushButton, QLineEdit, QTextEdit, QListWidget)) and widget not in allowed_widgets:
+                    widget.setEnabled(not network_speed_button.is_active)
+
+            if network_speed_button.is_active:
+                # 使用统一的红色动画样式（模仿英语按钮样式）
+                network_speed_button.setStyleSheet("background-color: red; color: white; border-radius: 8px;")
+
+                # 删除动画代码部分
+
+                net_io = psutil.net_io_counters()
+                last_bytes_sent = net_io.bytes_sent
+                last_bytes_recv = net_io.bytes_recv
+                last_time = time.time()
+                if speed_test_timer is None:
+                    speed_test_timer = QTimer()
+                    speed_test_timer.timeout.connect(update_speed_display)
+                speed_test_timer.start(500)
+                update_speed_display()
+            else:
+                network_speed_button.setStyleSheet(original_english_btn_style)
+
+                # 恢复控件启用（仅启用交互控件）
+                for widget in main_window.findChildren(QWidget):
+                    if isinstance(widget, (QPushButton, QLineEdit, QTextEdit, QListWidget)):
+                        widget.setEnabled(True)
+                clear_display(display_area)
+                appendLogWithEffect(display_area, "🟢 网络测试已停止\n")
+                if speed_test_timer is not None:
+                    speed_test_timer.stop()
+
+        except Exception as e:
+            appendLogWithEffect(display_area, f"⚠️ 切换网络测试状态失败：{str(e)}\n")
+
+    # 确保信号连接
+    try:
+        if network_speed_button.clicked.disconnect:
+            network_speed_button.clicked.disconnect()
+    except TypeError:
+        pass
+    network_speed_button.clicked.connect(toggle_network_speed)
+    network_speed_button.enterEvent = lambda event: update_status_bar("网速测试")
+
 
     # 状态栏容器
     status_container = QWidget()
@@ -1247,6 +1905,7 @@ def create_main_window():
     status_layout.addWidget(status_bar)
     status_layout.addWidget(night_mode_button)
     status_layout.addWidget(english_learn_button)
+    status_layout.addWidget(network_speed_button)
     status_layout.setContentsMargins(0, 0, 0, 0)
     status_layout.setSpacing(5)
     status_container.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
@@ -1267,20 +1926,23 @@ def create_main_window():
 
     # 搜索框
     search_edit = QLineEdit()
-    search_edit.setPlaceholderText(tr('🔍脚本名称/单词'))
+    search_edit.setPlaceholderText(tr('👁‍🗨search'))
     search_edit.setStyleSheet(search_edit_style)
     completer_items = []
     completer_model = QStringListModel(completer_items)
     completer = QCompleter(completer_model)
     completer.setFilterMode(Qt.MatchContains)
     completer.setCaseSensitivity(Qt.CaseInsensitive)
+    search_edit.installEventFilter(main_window)  # 安装事件过滤器
+    main_window.eventFilter = lambda obj, event: handle_hover_search_edit(obj, event) if obj == search_edit else False
+
     search_edit.textChanged.connect(lambda text: filter_list_widget(list_widget, text))
 
     # 左侧布局
     left_layout = QVBoxLayout()
     left_layout.addWidget(search_edit)
     left_layout.addWidget(list_widget)
-    left_widget = QWidget()  # 赋值给全局变量
+    left_widget = QWidget()
     left_widget.setLayout(left_layout)
     left_widget.setStyleSheet(left_widget_style)
 
@@ -1291,22 +1953,22 @@ def create_main_window():
 
     # 按钮布局
     button_layout = QHBoxLayout()
-    create_script_button = create_button("🖋 创建脚本", main_window,
+    create_script_button = create_button("🌟 创建脚本", main_window,
                                          lambda: show_create_script_dialog(main_window, list_widget, display_area,
                                                                            completer_model))
     remove_selected_button = create_button("🗑️ 删除脚本", main_window,
                                            lambda: remove_script(list_widget, display_area, completer_model))
     clear_button = create_button("🧹️ 清除屏幕", main_window, lambda: clear_display(display_area))
-    update_log_button = create_button("📜 开发者日志|设备信息", main_window,
+    update_log_button = create_button("📜 设备信息", main_window,
                                       lambda: update_log_with_effect(display_area))
 
-    create_script_button.enterEvent = lambda event: update_status_bar("🖋 创建脚本")
+    create_script_button.enterEvent = lambda event: update_status_bar("🌟 创建脚本")
     remove_selected_button.enterEvent = lambda event: update_status_bar("🗑️ 删除脚本")
     clear_button.enterEvent = lambda event: update_status_bar("🧹️ 清除日志")
     update_log_button.enterEvent = lambda event: update_status_bar("📜 查看日志 / 设备信息")
     search_edit.enterEvent = lambda event: update_status_bar("🔍 搜索框")
     english_learn_button.enterEvent = lambda event: update_status_bar("💃 English_learn")
-    night_mode_button.enterEvent = lambda event: update_status_bar("🌙 夜间模式")
+    night_mode_button.enterEvent = lambda event: update_status_bar("夜间/日间")
 
     button_layout.addStretch()
     button_layout.addWidget(create_script_button)
@@ -1373,7 +2035,7 @@ def toggle_english_mode():
         # 新增：清空搜索框内容
         search_edit.clear()
         animate_search_edit_height(250)
-        appendLogWithEffect(display_area, """🔴已开启单词查询模式
+        appendLogWithEffect(display_area, """🔴已开启单词查询模式  (键入单词查询)
 ███████╗███╗   ██╗ ██████╗ ██╗     ██╗███████╗██╗  ██╗
 ██╔════╝████╗  ██║██╔════╝ ██║     ██║██╔════╝██║  ██║
 █████╗  ██╔██╗ ██║██║  ███╗██║     ██║███████║███████║
@@ -1413,10 +2075,10 @@ def toggle_english_mode():
 
 
 def toggle_night_mode():
-    global night_mode, main_window, english_learn_button, night_mode_button, status_bar
+    global night_mode, main_window, english_learn_button, night_mode_button, status_bar, title_bar, title_bar
     global list_widget, search_edit, display_area, create_script_button, remove_selected_button, clear_button, update_log_button
     global original_english_btn_style, left_widget, display_area_style_night
-    global list_widget_style_night, search_edit_style_night, main_window_style_night, left_widget_style_night, button_style_night
+    global list_widget_style_night, search_edit_style_night, left_widget_style_night, button_style_night
 
     # 定义夜间模式按钮的默认样式
     night_mode_button_style = """
@@ -1455,8 +2117,13 @@ def toggle_night_mode():
 
         main_window.setStyleSheet("""
             QMainWindow, QWidget {
-                background-color: #000000;  /* 纯黑背景 */
+                background-color: #000000;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
                 color: #FFFFFF;
+                border-top-left-radius: 15px; /* 左上角圆角 */
+                border-top-right-radius: 15px; /* 右上角圆角 */
+                border-bottom-left-radius: 15px; /* 左下角圆角 */
+                border-bottom-right-radius: 15px; /* 右下角圆角 */
             }
             QSplitter {
                 background-color: #000000;  /* 分割器背景 */
@@ -1497,17 +2164,36 @@ def toggle_night_mode():
         remove_selected_button.setStyleSheet(button_style_night)
         clear_button.setStyleSheet(button_style_night)
         update_log_button.setStyleSheet(button_style_night)
-        night_mode_button.setText("  🌙  ")  # 切换为月亮图标
+        night_mode_button.setText("  🌜  ")  # 切换为月亮图标
         status_bar.setStyleSheet("""
             font-size: 12px;
             color: #EEEEEE;
             padding: 2px 8px;
+            border-radius: 8px;
             border-top: 1px solid #555555;
             background-color: #000000;  /* 与夜间模式主窗口一致 */
+            font-family: 'Sarasa Gothic', 'Consolas', 'Courier New', sans-serif;
         """)
+        title_bar.setStyleSheet("background-color: #000000; border-top-left-radius: 15px; border-top-right-radius: 15px;")
     else:
         night_mode = False
-        main_window.setStyleSheet(main_window_style)
+        main_window.setStyleSheet("""
+            QMainWindow, QWidget {
+                background-color: #F0F2F5;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                border-top-left-radius: 15px; /* 左上角圆角 */
+                border-top-right-radius: 15px; /* 右上角圆角 */
+                border-bottom-left-radius: 15px; /* 左下角圆角 */
+                border-bottom-right-radius: 15px; /* 右下角圆角 */
+            }
+            QSplitter {
+                background-color: #F0F2F5;  /* 确保分割器背景一致 */
+            }
+            QSplitter::handle {
+                background-color: #F0F2F5;  /* 分割器手柄背景 */
+            }
+        """)
+        title_bar.setStyleSheet("background-color: #F0F2F5; border-top-left-radius: 15px; border-top-right-radius: 15px;")
         list_widget.setStyleSheet(list_widget_style)
         search_edit.setStyleSheet(search_edit_style)
         display_area.setStyleSheet(display_area_style)
@@ -1516,14 +2202,16 @@ def toggle_night_mode():
         remove_selected_button.setStyleSheet(button_style)
         clear_button.setStyleSheet(button_style)
         update_log_button.setStyleSheet(button_style)
-        night_mode_button.setText("  ☀️  ")  # 切换回太阳图标
+        night_mode_button.setText("  🌞  ")  # 切换回太阳图标
         status_bar.setStyleSheet("""
             font-size: 12px;
             color: #444444;
             padding: 2px 8px;
+            border-radius: 8px;
             border-top: 1px solid #CCCCCC;
             background-color: #F0F2F5;  /* 与日间模式主窗口一致 */
         """)
+        title_bar.setStyleSheet("background-color: #F0F2F5; border-top-left-radius: 15px; border-top-right-radius: 15px;")
         # 恢复搜索框高度
         animate_search_edit_height(50 if not english_mode else 250)
 
@@ -1544,30 +2232,59 @@ def toggle_night_mode():
 
 
 def query_local_dictionary(word, top_n=5):
-    word_file = ensure_word_file()
-    if not word_file:
-        return []
+    """
+    模糊查询单词，支持：
+    - 输入英文或汉语，返回最接近的 top_n 个结果（英文和汉语对）
+    - 始终进行模糊匹配，按相似度排序
+    - 优化短输入（单字或短词）匹配
+    """
+    word = word.strip()
+    matches = []
 
-    try:
-        with open(word_file, 'r', encoding='utf-8') as f:
-            word_dict = {}
-            for line in f:
-                parts = line.strip().split(maxsplit=1)  # 只分割第一个空格
-                if len(parts) == 2:
-                    word_dict[parts[0].lower()] = parts[1]
+    # **模糊匹配**
+    # 英文模糊匹配
+    for eng_word in all_words:
+        similarity = difflib.SequenceMatcher(None, word.lower(), eng_word).ratio()
+        if similarity > 0.2:  # 降低阈值以捕获短输入
+            matches.append((similarity, eng_word, word_to_translation[eng_word]))
 
-            # 简单模糊匹配
-            matches = [{'word': w, 'translation': t}
-                       for w, t in word_dict.items()
-                       if word.lower() in w]
+    # 汉语模糊匹配
+    for trans, eng_word in translation_to_word.items():
+        # 对于短输入，优先检查是否为翻译的子串
+        if len(word) <= 2:  # 单字或双字输入
+            if word in trans:  # 子串匹配
+                matches.append((1.0, eng_word, trans))  # 高相似度
+            else:
+                similarity = difflib.SequenceMatcher(None, word, trans).ratio()
+                if similarity > 0.2:
+                    matches.append((similarity, eng_word, trans))
+        else:
+            similarity = difflib.SequenceMatcher(None, word, trans).ratio()
+            if similarity > 0.2:
+                matches.append((similarity, eng_word, trans))
 
-            # 按单词长度排序（更短的匹配更准确）
-            matches.sort(key=lambda x: len(x['word']))
-            return matches[:top_n]
-    except Exception as e:
-        print(f"查询单词错误: {e}")
-        return []
+    # 按相似度排序
+    matches.sort(reverse=True, key=lambda x: x[0])
 
+    # 返回 top_n 个结果
+    if matches:
+        return [{"word": eng, "translation": trans} for _, eng, trans in matches[:top_n]]
+    return []
+
+def query_and_display_result(word, result_label):
+    """ 查询单词并显示最接近的多个模糊匹配结果，适合实时预显示 """
+    if not word.strip():  # 空输入不显示结果
+        result_label.setText("")
+        return
+    results = query_local_dictionary(word)
+    if results:
+        # 构建显示文本，列出所有匹配结果
+        display_text = "🔍 预测结果:\n"
+        for i, result in enumerate(results, 1):
+            display_text += f"{i}. 英文: {result['word']} | 汉语: {result['translation']}\n"
+        result_label.setText(display_text.strip())
+    else:
+        result_label.setText(f"⚠️ 无与 '{word}' 相关的预测结果")
 
 def english_search_text_changed(text):
     """
@@ -1826,18 +2543,15 @@ def display_welcome_screen(display_area):
            ░███░░░░░███   ░███░░█     ░███         ░███        ░███      ░███
            ░███    ░███   ░███ ░   █  ░███      █  ░███      █ ░░███     ███ 
            █████   █████  ██████████  ███████████  ███████████  ░░░███████░  
-           ░░░░░   ░░░░░  ░░░░░░░░░░  ░░░░░░░░░░░  ░░░░░░░░░░░     ░░░░░░░        
-            ▄         ▄  ▄▄▄▄▄▄▄▄▄▄▄  ▄            ▄            ▄▄▄▄▄▄▄▄▄▄▄ 
-           ▐░▌       ▐░▌▐░░░░░░░░░░░▌▐░▌          ▐░▌          ▐░░░░░░░░░░░▌
-           ▐░▌       ▐░▌▐░█▀▀▀▀▀▀▀▀▀ ▐░▌          ▐░▌          ▐░█▀▀▀▀▀▀▀█░▌
-           ▐░▌       ▐░▌▐░▌          ▐░▌          ▐░▌          ▐░▌       ▐░▌
-           ▐░█▄▄▄▄▄▄▄█░▌▐░█▄▄▄▄▄▄▄▄▄ ▐░▌          ▐░▌          ▐░▌       ▐░▌
-           ▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░▌          ▐░▌          ▐░▌       ▐░▌
-           ▐░█▀▀▀▀▀▀▀█░▌▐░█▀▀▀▀▀▀▀▀▀ ▐░▌          ▐░▌          ▐░▌       ▐░▌
-           ▐░▌       ▐░▌▐░▌          ▐░▌          ▐░▌          ▐░▌       ▐░▌
-           ▐░▌       ▐░▌▐░█▄▄▄▄▄▄▄▄▄ ▐░█▄▄▄▄▄▄▄▄▄ ▐░█▄▄▄▄▄▄▄▄▄ ▐░█▄▄▄▄▄▄▄█░▌
-           ▐░▌       ▐░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌▐░░░░░░░░░░░▌
-            ▀         ▀  ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀▀▀▀ 
+           ░░░░░   ░░░░░  ░░░░░░░░░░  ░░░░░░░░░░░  ░░░░░░░░░░░     ░░░░░░░                    
+██   ██ ██ ███    ██  ██████  ██    ██ ██    ██ ███    ██         ██    ██  ██     ██████  
+ ██ ██  ██ ████   ██ ██        ██  ██  ██    ██ ████   ██         ██    ██ ███    ██  ████ 
+  ███   ██ ██ ██  ██ ██   ███   ████   ██    ██ ██ ██  ██         ██    ██  ██    ██ ██ ██ 
+ ██ ██  ██ ██  ██ ██ ██    ██    ██    ██    ██ ██  ██ ██          ██  ██   ██    ████  ██ 
+██   ██ ██ ██   ████  ██████     ██     ██████  ██   ████ ███████   ████    ██ ██  ██████  
+                                                                                           
+                                                                                            
+            
 欢迎使用本软件！
     使用说明：
     1. 创建软件脚本：创建一个打开软件的脚本,需要用户自定义脚本名称以及选择打开软件的绝对路径,双击使用.
@@ -2733,6 +3447,7 @@ class MergeScriptSelectionDialog(QDialog):
             /* === 滚动条样式 === */
             QScrollBar:vertical, QScrollBar:horizontal {
                 border: none;
+                background: transparent;  /* 确保背景透明 */
                 background: #F5F7FA;
                 width: 10px;
                 height: 10px;
@@ -2789,7 +3504,7 @@ class MergeScriptSelectionDialog(QDialog):
         available_group.setStyleSheet("""
             QGroupBox {
                 color: black;  /* 设置字体颜色为红色 */
-                font: bold 12px;  /* 可选：设置字体大小和粗细 */
+                font: bold 10px;  /* 可选：设置字体大小和粗细 */
             }
         """)
         available_group.setObjectName("AvailableGroup")
@@ -2805,7 +3520,7 @@ class MergeScriptSelectionDialog(QDialog):
         selected_group.setStyleSheet("""
             QGroupBox {
                 color: black;  /* 设置字体颜色为红色 */
-                font: bold 12px;  /* 可选：设置字体大小和粗细 */
+                font: bold 10px;  /* 可选：设置字体大小和粗细 */
             }
         """)
         selected_group.setObjectName("SelectedGroup")
@@ -2856,11 +3571,11 @@ class MergeScriptSelectionDialog(QDialog):
         lists_layout.addWidget(selected_group)
 
         # === 预览区域 ===
-        preview_group = QGroupBox("执行顺序预览")
+        preview_group = QGroupBox("执行顺序>>>")
         preview_group.setStyleSheet("""
             QGroupBox {
                 color: black;  /* 设置字体颜色为红色 */
-                font: bold 12px;  /* 可选：设置字体大小和粗细 */
+                font: bold 11px;  /* 可选：设置字体大小和粗细 */
             }
         """)
         preview_group.setObjectName("PreviewGroup")
@@ -2896,31 +3611,36 @@ class MergeScriptSelectionDialog(QDialog):
         self.set_button_styles()
 
     def set_button_styles(self):
-        """设置按钮的统一样式"""
+        """设置按钮的统一样式，与英语学习按钮一致，按下后鼠标悬浮无颜色变化"""
         button_style = """
             QPushButton {
                 background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
-                                                stop:0 rgba(180, 180, 180, 1), 
-                                                stop:1 rgba(140, 140, 140, 1));
+                                                  stop:0 rgba(200, 200, 200, 1), stop:1 rgba(160, 160, 160, 1));
                 border: 1px solid #BBBBBB;
                 border-radius: 8px;
-                color: #000000;
+                color: #222222;
                 font-size: 14px;
                 font-weight: bold;
-                padding: 8px 12px;
-                min-width: 100px;
-                min-height: 30px;
+                padding: 2px 8px;
+                text-align: center;
+                margin: 0;
+                box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
             }
             QPushButton:hover {
                 background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
-                                                stop:0 rgba(160, 160, 160, 1),
-                                                stop:1 rgba(120, 120, 120, 1));
+                                                  stop:0 rgba(160, 160, 160, 1), stop:1 rgba(120, 120, 120, 1));
                 border: 1px solid #AAAAAA;
             }
             QPushButton:pressed {
                 background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
-                                                stop:0 rgba(140, 140, 140, 1),
-                                                stop:1 rgba(100, 100, 100, 1));
+                                                  stop:0 rgba(120, 120, 120, 1), stop:1 rgba(90, 90, 90, 1));
+                border: 1px solid #999999;
+                box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+                transform: scale(0.95); /* 添加按下时的缩小效果 */
+            }
+            QPushButton:pressed:hover {
+                background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
+                                                  stop:0 rgba(120, 120, 120, 1), stop:1 rgba(90, 90, 90, 1));
                 border: 1px solid #999999;
             }
         """
@@ -3025,7 +3745,7 @@ class MergeScriptSelectionDialog(QDialog):
     def update_preview(self):
         """生成简洁无框的脚本预览"""
         self.preview.clear()
-        self.preview.setFont(QFont("Consolas", 10))  # 仍然使用等宽字体保证对齐
+        self.preview.setFont(QFont("Consolas", 8))  # 仍然使用等宽字体保证对齐
 
         if self.selected_list.count() == 0:
             self.preview.setPlainText("当前没有选择任何脚本")
@@ -3128,28 +3848,28 @@ class CreateScriptDialog(QDialog):
             }
             QPushButton {
                 background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
-                                                stop:0 rgba(180, 180, 180, 1), stop:1 rgba(140, 140, 140, 1));
+                                                stop:0 rgba(200, 200, 200, 1), stop:1 rgba(160, 160, 160, 1));
                 border: 1px solid #BBBBBB;
                 border-radius: 8px;
-                color: #000000;
-                font-size: 16px;
+                color: #222222;
+                font-size: 14px;
                 font-weight: bold;
-                padding: 12px 24px;
+                padding: 2px 8px;
                 text-align: center;
-                text-decoration: none;
-                margin: 4px 2px;
-                box-shadow: 3px 3px 5px rgba(0, 0, 0, 0.1);
+                margin: 0;
+                box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
             }
             QPushButton:hover {
                 background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
-                                                stop:0 rgba(140, 140, 140, 1), stop:1 rgba(100, 100, 100, 1));
+                                                stop:0 rgba(160, 160, 160, 1), stop:1 rgba(120, 120, 120, 1));
                 border: 1px solid #AAAAAA;
             }
             QPushButton:pressed {
                 background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
-                                                stop:0 rgba(100, 100, 100, 1), stop:1 rgba(80, 80, 80, 1));
+                                                stop:0 rgba(120, 120, 120, 1), stop:1 rgba(90, 90, 90, 1));
                 border: 1px solid #999999;
-                box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+                box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+                transform: scale(0.95); /* 添加按下时的缩小效果 */
             }
         """)
 
@@ -3256,6 +3976,9 @@ class CreateScriptDialog(QDialog):
             QMessageBox.critical(self, tr('错误'), f"{tr('创建合并脚本时发生错误')}: {e}")
 
 
+
+
+
 class StyledScrollingDelegate(QStyledItemDelegate):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -3294,40 +4017,42 @@ class StyledScrollingDelegate(QStyledItemDelegate):
 
         painter.save()
         # 设置抗锯齿和平滑像素转换以提高渲染质量
-        painter.setRenderHint(QPainter.Antialiasing, True)
-        painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
+        painter.setRenderHints(QPainter.Antialiasing | QPainter.SmoothPixmapTransform | QPainter.TextAntialiasing)
 
         # 获取当前项
-        item = self.list_widget.item(index.row())
+        item = self.list_widget.itemFromIndex(index)
         if not item:
             painter.restore()
             return
 
-        # 检查是否为悬停状态
-        item_id = item.data(Qt.UserRole)
-        is_hovered = item_id in self.hover_states
+        # 如果项隐藏，则不绘制
+        if item.isHidden():
+            painter.restore()
+            return
 
-        # 获取悬停动画进度
-        progress = self.hover_states.get(item_id, 0.0)
-        eased_progress = self.ease_animation(progress)
+        # 获取可见项索引
+        visible_index = self.get_visible_index(index)
+        if visible_index == -1:
+            painter.restore()
+            return
 
-        # 确定背景颜色
+        # 获取悬停进度并确保平滑
+        hover_progress = min(max(self.list_widget.hover_states.get(id(item), 0.0), 0.0), 1.0)
+        is_hovered = hover_progress > 0
+        # 使用缓入缓出二次函数计算动画进度
+        eased_progress = self.easeInOutQuad(hover_progress)
+
+        # 计算背景颜色
+        bg_color = self.even_color if visible_index % 2 == 0 else self.odd_color
         if option.state & QStyle.State_Selected:
             bg_color = self.selected_color
-        elif index.row() % 2 == 0:
-            bg_color = self.even_color
-        else:
-            bg_color = self.odd_color
-
-        # 如果是悬停状态，混合颜色
         if is_hovered:
             bg_color = self.mix_colors(bg_color, self.hover_color, eased_progress)
 
-        # 悬停动画参数配置
-        max_offset = 3  # 卡片向右滑动的最大像素距离
-        scale = 1.0 + 0.05 * eased_progress  # 轻微放大效果，增加“弹出”感
-        rotation = 15 * eased_progress  # 旋转角度，最大1.5度
-        shadow_opacity = 0.3 + 0.2 * eased_progress  # 动态阴影透明度
+        # 动画参数配置：抽卡片效果
+        max_offset = 19  # 向右滑动的最大像素距离
+        scale = 1.0 + 0.07 * eased_progress  # 轻微放大效果，最大 1.05 倍
+        shadow_opacity = 0.3 + 0.3 * eased_progress  # 动态阴影透明度
 
         # 获取原始项矩形区域
         original_rect = option.rect
@@ -3336,52 +4061,66 @@ class StyledScrollingDelegate(QStyledItemDelegate):
         transformed_rect = QRectF(original_rect)
         if is_hovered:
             # 计算偏移量
-            offset = max_offset * eased_progress
-            transformed_rect.translate(offset, 0)
+            offset_x = max_offset * eased_progress
+            transformed_rect.translate(offset_x, 0)
 
-            # 计算缩放中心
+            # 应用缩放
             center = transformed_rect.center()
-
-            # 应用缩放和旋转
             painter.translate(center)
-            painter.rotate(rotation)
             painter.scale(scale, scale)
             painter.translate(-center)
 
-            # 绘制阴影
+        # 绘制阴影（仅在悬停时）
+        if is_hovered:
+            shadow_path = QPainterPath()
+            shadow_rect = QRectF(transformed_rect.adjusted(3, 3, -3, -3))
+            shadow_path.addRoundedRect(shadow_rect, 15, 15)
             shadow_color = self.shadow_color
             shadow_color.setAlphaF(shadow_opacity)
             painter.setPen(Qt.NoPen)
             painter.setBrush(shadow_color)
-            shadow_offset = 3  # 阴影偏移量
-            shadow_rect = transformed_rect.translated(shadow_offset, shadow_offset)
-            painter.drawRoundedRect(shadow_rect, 10, 10)
+            painter.drawPath(shadow_path)
 
-        # 绘制背景
+        # 绘制圆角背景
+        path = QPainterPath()
+        radius = 15
+        rect_f = QRectF(transformed_rect.adjusted(2, 2, -2, -2))
+        path.addRoundedRect(rect_f, radius, radius)
+
+        # 应用渐变背景
+        gradient = QLinearGradient(rect_f.topLeft(), rect_f.bottomRight())
+        gradient.setColorAt(0, bg_color.lighter(190))
+        gradient.setColorAt(1, bg_color.darker(100))
         painter.setPen(Qt.NoPen)
-        painter.setBrush(bg_color)
-        painter.drawRoundedRect(transformed_rect, 10, 10)
+        painter.fillPath(path, gradient)
+
+        # 恢复画家状态以绘制图标和文本（避免缩放影响）
+        painter.restore()
+        painter.save()
 
         # 绘制图标
-        icon_size = 24
         icon = item.icon()
-        icon_rect = QRect(int(transformed_rect.left() + 8),
-                          int(transformed_rect.center().y() - icon_size / 2),
-                          icon_size, icon_size)
-        icon.paint(painter, icon_rect, Qt.AlignCenter)
+        if not icon.isNull():
+            icon_rect = QRect(
+                int(transformed_rect.left() + 12),
+                int(transformed_rect.top() + (transformed_rect.height() - 20) / 2),
+                20, 20
+            )
+            icon.paint(painter, icon_rect, Qt.AlignCenter)
 
         # 绘制文本
-        text = item.text()
-        font = painter.font()
-        font.setPointSize(12)  # 固定字体大小
+        text = item.text() or ""
+        font = option.font
+        font.setPointSize(12)
+        font.setStyleStrategy(QFont.PreferAntialias)
         painter.setFont(font)
         fm = QFontMetrics(font)
         text_width = fm.horizontalAdvance(text)
-        available_width = transformed_rect.width() - 35
+        available_width = transformed_rect.width() - 40
 
         # 获取滚动数据
         scroll_data = item.data(Qt.UserRole + 1)
-        offset = scroll_data[0] if scroll_data else 0
+        offset = scroll_data[0] if scroll_data and len(scroll_data) > 0 else 0
 
         # 设置文本颜色
         text_color = option.palette.color(QPalette.Text)
@@ -3389,21 +4128,21 @@ class StyledScrollingDelegate(QStyledItemDelegate):
             text_color = self.selected_text_color
         if is_hovered:
             if self.night_mode:
-                text_color = QColor("#000000")  # 夜间模式悬停时字体为黑色
+                text_color = QColor("#000000")
             else:
-                text_color = text_color.lighter(120)
+                text_color = text_color.lighter(110)
 
         painter.setPen(text_color)
 
         # 绘制文本区域
         text_rect = QRect(transformed_rect.toRect())
-        text_rect.setLeft(int(transformed_rect.left() + 35))
+        text_rect.setLeft(int(transformed_rect.left() + 40))
         text_rect.setWidth(int(available_width))
 
         if text_width > available_width:
             painter.setClipRect(text_rect)
             adjusted_rect = QRect(text_rect)
-            adjusted_rect.translate(-offset, 0)
+            adjusted_rect.setLeft(int(text_rect.left() - offset))
             painter.drawText(adjusted_rect, Qt.AlignLeft | Qt.AlignVCenter, text)
         else:
             painter.drawText(text_rect, Qt.AlignLeft | Qt.AlignVCenter, text)
@@ -3603,20 +4342,27 @@ class UnifiedItemDelegate(QStyledItemDelegate):
         """根据夜间模式更新颜色"""
         if self.night_mode:
             self.even_color = QColor("#333333")  # 夜间模式偶数行颜色：深灰
-            self.odd_color = QColor("#3A3A3A")  # 夜间模式奇数行颜色：稍浅的深灰
-            self.selected_color = QColor("#E8ECEF")  # 夜间模式选中颜色：浅白色
-            self.hover_color = QColor("#E8ECEF")  # 夜间模式悬停颜色：稍亮的浅白色
+            self.odd_color = QColor("#333333")  # 夜间模式奇数行颜色：稍浅的深灰
+            self.selected_color = QColor("#F5F5F5")  # 夜间模式选中颜色：浅白色
+            self.hover_color = QColor("#F5F5F5")  # 夜间模式悬停颜色：稍亮的浅白色
             self.shadow_color = QColor(200, 200, 200, 60)  # 夜间模式阴影颜色：较亮的灰白色
-            self.selected_text_color = QColor("#000000")  # 夜间模式选中字体颜色：黑色
+            self.selected_text_color = QColor("#ffffff")  # 夜间模式选中字体颜色：白色
         else:
             self.even_color = QColor("#F7F9FC")  # 日间模式偶数行颜色：浅蓝灰色，干净高级
-            self.odd_color = QColor("#EDF1F7")  # 日间模式奇数行颜色：稍深的蓝灰色，柔和对比
-            self.selected_color = QColor("#D1E0FF")  # 日间模式选中颜色：浅蓝色，现代感
-            self.hover_color = QColor("#D1E0FF")  # 日间模式悬停颜色：浅灰蓝色，优雅过渡
+            self.odd_color = QColor("#F7F9FC")  # 日间模式奇数行颜色：稍深的蓝灰色，柔和对比
+            self.selected_color = QColor("#F5F5F5")  # 日间模式选中颜色：浅蓝色，现代感
+            self.hover_color = QColor("#F5F5F5")  # 日间模式悬停颜色：浅灰蓝色，优雅过渡
             self.shadow_color = QColor(50, 50, 50, 50)  # 日间模式阴影颜色：深灰色，柔和高雅
             self.selected_text_color = QColor("#000000")  # 日间模式选中字体颜色：黑色
 
     def paint(self, painter, option, index):
+        """
+        绘制列表项，包含倒圆角图标、背景、文本和动画效果
+        参数：
+            painter: QPainter 对象，用于绘制
+            option: QStyleOptionViewItem 对象，包含绘制选项
+            index: QModelIndex 对象，表示当前项的索引
+        """
         # 在绘制前更新颜色，确保实时反映夜间模式
         global night_mode
         if self.night_mode != night_mode:
@@ -3625,6 +4371,7 @@ class UnifiedItemDelegate(QStyledItemDelegate):
 
         painter.save()
         # 设置抗锯齿和平滑像素转换以提高渲染质量
+        painter.setRenderHints(QPainter.TextAntialiasing)  # 仅文本抗锯齿
         painter.setRenderHints(
             QPainter.Antialiasing | QPainter.SmoothPixmapTransform | QPainter.HighQualityAntialiasing)
 
@@ -3639,29 +4386,21 @@ class UnifiedItemDelegate(QStyledItemDelegate):
             painter.restore()
             return
 
-        # 获取可见项索引
-        visible_index = self.get_visible_index(index)
-        if visible_index == -1:
-            painter.restore()
-            return
-
         # 获取悬停进度并确保平滑
         hover_progress = min(max(self.list_widget.hover_states.get(id(item), 0.0), 0.0), 1.0)
         is_hovered = hover_progress > 0
         # 使用缓入缓出二次函数计算动画进度
         eased_progress = self.easeInOutQuad(hover_progress)
 
-        # 计算背景颜色
-        bg_color = self.even_color if visible_index % 2 == 0 else self.odd_color
-        if option.state & QStyle.State_Selected:
-            bg_color = self.selected_color
-        if is_hovered:
-            bg_color = self.mix_colors(bg_color, self.hover_color, eased_progress)
+        # 计算背景颜色，确保悬停和选中状态一致
+        bg_color = self.even_color  # 统一使用 even_color（夜间模式下 even_color 和 odd_color 相同）
+        if option.state & QStyle.State_Selected or is_hovered:
+            bg_color = self.selected_color  # 悬停和选中使用相同的颜色（夜间模式为 #333333）
 
         # 悬停动画参数配置
-        max_offset = 3  # 卡片向右滑动的最大像素距离
-        scale = 1.0 + 0.05 * eased_progress  # 轻微放大效果，增加“弹出”感
-        rotation = 7 * eased_progress  # 旋转角度，最大1.5度
+        max_offset = 30  # 卡片向右滑动的最大像素距离
+        scale = 1.0 + 0.15 * eased_progress  # 轻微放大效果，增加“弹出”感
+        rotation = 0 * eased_progress  # 旋转角度，最大0度
         shadow_opacity = 0.3 + 0.2 * eased_progress  # 动态阴影透明度
 
         # 获取原始项矩形区域
@@ -3670,13 +4409,12 @@ class UnifiedItemDelegate(QStyledItemDelegate):
         # 应用悬停变换
         transformed_rect = QRectF(original_rect)
         if is_hovered:
-            pivot_x = original_rect.center().x()  # 修改旋转圆心为选项左侧
+            pivot_x = original_rect.center().x()  # 旋转圆心为选项中心
             pivot_y = original_rect.center().y()
 
             # 使用浮点数偏移以确保平滑动画
             offset_x = max_offset * eased_progress
             offset_y = 0 * eased_progress  # 轻微垂直提升
-            # 优化变换顺序以减少渲染开销
             painter.translate(pivot_x + offset_x, pivot_y + offset_y)
             painter.scale(scale, scale)
             painter.rotate(rotation)
@@ -3688,23 +4426,61 @@ class UnifiedItemDelegate(QStyledItemDelegate):
         if is_hovered:
             shadow_path = QPainterPath()
             shadow_rect = QRectF(transformed_rect.adjusted(4, 4, -4, -4))
-            shadow_path.addRoundedRect(shadow_rect, 19, 19)
+            shadow_path = self.create_rounded_path(shadow_rect, 19, left_only=True)  # 使用左边圆角
             shadow_color = self.shadow_color
             shadow_color.setAlphaF(shadow_opacity)
             painter.setPen(Qt.NoPen)
             painter.setBrush(shadow_color)
             painter.drawPath(shadow_path)
 
-        # 绘制圆角背景
+        # 绘制圆角背景（左边圆角，右边直角）
         path = QPainterPath()
-        radius = 19
         rect_f = QRectF(transformed_rect.adjusted(2, 2, -2, -2))
-        path.addRoundedRect(rect_f, radius, radius)
+        path = self.create_rounded_path(rect_f, 19, left_only=True)
 
-        # 应用渐变背景
-        gradient = QLinearGradient(rect_f.topLeft(), rect_f.bottomRight())
-        gradient.setColorAt(0, bg_color.lighter(110))
-        gradient.setColorAt(1, bg_color.darker(105))
+        # 应用渐变背景，动态过渡方向
+        is_selected_or_hovered = option.state & QStyle.State_Selected or is_hovered
+        gradient = QLinearGradient(0, rect_f.top(), 0, rect_f.top())  # 初始化，稍后设置点
+        if self.night_mode:
+            window_bg_color = QColor("#000000")  # 夜间模式窗口背景色
+            default_start_color = QColor("#FFFFFF")  # 未选中：左侧白色
+            default_end_color = QColor("#000000")  # 未选中：右侧黑色
+        else:
+            window_bg_color = QColor("#F0F2F5")  # 日间模式窗口背景色
+            default_start_color = window_bg_color  # 默认：浅蓝灰色
+            default_end_color = bg_color.darker(190)  # 默认：较深色
+
+        # 动态调整渐变方向和颜色
+        if is_selected_or_hovered and self.night_mode:
+            # 夜间模式，悬停或选中：左白右黑（#FFFFFF -> #000000）
+            start_color = default_start_color  # #FFFFFF
+            end_color = default_end_color  # #000000
+            start_x = rect_f.left() * (1 - eased_progress) + rect_f.right() * eased_progress
+            end_x = rect_f.right() * (1 - eased_progress) + rect_f.left() * eased_progress
+        elif is_selected_or_hovered:
+            # 日间模式，悬停或选中：左浅右深
+            start_color = default_end_color
+            end_color = default_start_color
+            start_x = rect_f.left() * (1 - eased_progress) + rect_f.right() * eased_progress
+            end_x = rect_f.right() * (1 - eased_progress) + rect_f.left() * eased_progress
+        elif self.night_mode:
+            # 夜间模式，未选中：右黑左白（#000000 -> #FFFFFF）
+            start_color = default_end_color  # #000000
+            end_color = default_start_color  # #FFFFFF
+            start_x = rect_f.right() * (1 - eased_progress) + rect_f.left() * eased_progress
+            end_x = rect_f.left() * (1 - eased_progress) + rect_f.right() * eased_progress
+        else:
+            # 日间模式，未选中：左深右浅
+            start_color = default_start_color
+            end_color = default_end_color
+            start_x = rect_f.right() * (1 - eased_progress) + rect_f.left() * eased_progress
+            end_x = rect_f.left() * (1 - eased_progress) + rect_f.right() * eased_progress
+
+        gradient.setStart(start_x, rect_f.top())
+        gradient.setFinalStop(end_x, rect_f.top())
+        gradient.setColorAt(0, start_color)
+        gradient.setColorAt(1, end_color)
+
         painter.setPen(Qt.NoPen)
         painter.fillPath(path, gradient)
 
@@ -3712,7 +4488,7 @@ class UnifiedItemDelegate(QStyledItemDelegate):
         painter.restore()
         painter.save()
 
-        # 绘制图标
+        # 绘制图标（带倒圆角效果）
         icon = item.icon()
         if not icon.isNull():
             icon_rect = QRect(
@@ -3720,14 +4496,28 @@ class UnifiedItemDelegate(QStyledItemDelegate):
                 int(transformed_rect.top() + (transformed_rect.height() - 20) / 2),
                 20, 20
             )
+            # 创建倒圆角路径
+            icon_path = QPainterPath()
+            icon_rect_f = QRectF(icon_rect)
+            corner_radius = 5  # 图标倒圆角半径
+            icon_path.addRoundedRect(icon_rect_f, corner_radius, corner_radius)
+
+            # 保存当前裁剪状态
+            painter.save()
+            # 应用倒圆角裁剪
+            painter.setClipPath(icon_path)
+            # 绘制图标
             icon.paint(painter, icon_rect, Qt.AlignCenter)
+            # 恢复裁剪状态
+            painter.restore()
 
         # 绘制文本
         text = item.text()
         font = option.font
-        font.setPointSize(12)  # 固定字体大小
+        font.setStyleStrategy(QFont.PreferAntialias)  # 优化抗锯齿
         painter.setFont(font)
         fm = QFontMetrics(font)
+
         text_width = fm.horizontalAdvance(text)
         available_width = transformed_rect.width() - 35
 
@@ -3737,13 +4527,8 @@ class UnifiedItemDelegate(QStyledItemDelegate):
 
         # 设置文本颜色
         text_color = option.palette.color(QPalette.Text)
-        if option.state & QStyle.State_Selected:
-            text_color = self.selected_text_color
-        if is_hovered:
-            if self.night_mode:
-                text_color = QColor("#000000")  # 夜间模式悬停时字体为黑色
-            else:
-                text_color = text_color.lighter(120)
+        if is_selected_or_hovered:
+            text_color = self.selected_text_color  # 夜间模式下为黑色
 
         painter.setPen(text_color)
 
@@ -3789,6 +4574,43 @@ class UnifiedItemDelegate(QStyledItemDelegate):
             return 0.5 * t * t
         t -= 1
         return -0.5 * (t * (t - 2) - 1)
+
+    def create_rounded_path(self, rect, radius, left_only=False):
+        """
+        创建自定义圆角路径
+        参数：
+            rect: QRectF 对象，表示路径的矩形区域
+            radius: 圆角半径
+            left_only: 是否仅左边圆角，右边直角
+        返回：
+            QPainterPath 对象，表示圆角路径
+        """
+        path = QPainterPath()
+        left = rect.left()
+        right = rect.right()
+        top = rect.top()
+        bottom = rect.bottom()
+
+        if left_only:
+            # 左上角圆角
+            path.moveTo(left + radius, top)
+            path.arcTo(left, top, radius * 2, radius * 2, 90, 90)
+            # 左下角圆角
+            path.lineTo(left, bottom - radius)
+            path.arcTo(left, bottom - radius * 2, radius * 2, radius * 2, 180, 90)
+            # 右下角直角
+            path.lineTo(right, bottom)
+            # 右上角直角
+            path.lineTo(right, top)
+            path.closeSubpath()
+        else:
+            # 所有角圆角
+            path.addRoundedRect(rect, radius, radius)
+
+        return path
+
+
+
 
 
 class SmoothListWidget(QListWidget):
