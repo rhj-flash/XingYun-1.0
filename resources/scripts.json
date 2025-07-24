@@ -12,17 +12,17 @@
     {
         "name": "chat_gpt",
         "type": "url",
-        "value": "https://chatgpt.com"
+        "value": "https://chatgpt.com/"
     },
     {
         "name": "Grok",
         "type": "url",
-        "value": "https://grok.com/chat"
+        "value": "https://grok.com/chat/"
     },
     {
         "name": "Le Chat - Mistral AI  (VPN节点开伦敦)",
         "type": "url",
-        "value": "https://chat.mistral.ai/chat/"
+        "value": "https://chat.mistral.ai/chat"
     },
     {
         "name": "deep_seek",
@@ -42,12 +42,12 @@
     {
         "name": "YouTube",
         "type": "url",
-        "value": "https://www.youtube.com"
+        "value": "https://www.youtube.com/"
     },
     {
         "name": "Google",
         "type": "url",
-        "value": "https://www.google.com"
+        "value": "https://www.google.com/"
     },
     {
         "name": "雷神加速器",
@@ -67,7 +67,7 @@
     {
         "name": "Wikipedia（维基百科）",
         "type": "url",
-        "value": "https://zh.wikipedia.org"
+        "value": "https://zh.wikipedia.org/"
     },
     {
         "name": "CSDN",

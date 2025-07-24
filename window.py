@@ -3,7 +3,7 @@ import threading  # 确保导入 threading 模块
 import time
 from urllib.parse import urlparse, urljoin
 
-from PyQt5.QtCore import QEasingCurve
+from PyQt5.QtCore import QEasingCurve, QParallelAnimationGroup
 from PyQt5.QtCore import QRect
 from PyQt5.QtCore import QStringListModel, QTranslator, QCoreApplication, QPropertyAnimation, QPoint, QEvent, \
     QTimer, QObject, QRectF, QSize, QDateTime
@@ -207,14 +207,17 @@ search_edit_style = """
         height: 70px;
         color: #444444;
     }
+    /* 已移除 hover 效果 */
+    /*
     QLineEdit:hover {
         background-color: qlineargradient(spread:pad, x1:1, y1:0, x2:0, y2:0,
-                                          stop:0 #7f7f7f, stop:1 #F5F5F5);
+                                          stop:0 #7f7f7f, stop:1 #E8E8E8);
     }
+    */
     QLineEdit:focus {
         border: 0px solid #A0A0A0;
         background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
-                                          stop:0 #F0F2F5, stop:1 #7f7f7f);
+                                          stop:0 #7f7f7f, stop:1 #E8E8E8);
     }
     QLineEdit::placeholder {
         color: #888888;
@@ -427,6 +430,7 @@ QPushButton:hover {
 }
 """
 
+
 search_edit_style_night = """
     QLineEdit {
         background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
@@ -439,12 +443,19 @@ search_edit_style_night = """
         font-weight: bold;
         min-width: 100px;
         height: 70px;
-        color: #EEEEEE;
+        color: #000000;
     }
+    /* 已移除 hover 效果 */
+    /*
+    QLineEdit:hover {
+        background-color: qlineargradient(spread:pad, x1:1, y1:0, x2:0, y2:0,
+                                          stop:0 #ffffff, stop:1 #000000);
+    }
+    */
     QLineEdit:focus {
         border: 0px solid #A0A0A0;
         background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
-                                          stop:0 #000000, stop:1 #ffffff);
+                                          stop:0 #ffffff, stop:1 #000000);
     }
     QLineEdit::placeholder {
         color: #AAAAAA;
@@ -1061,10 +1072,15 @@ class MyDelegate(QStyledItemDelegate):
 
 
 def animate_search_edit_height(target_height):
+    """
+    执行搜索框的动画效果，包括高度、缩放、抖动和透明度变化
+    参数:
+        target_height: 动画的目标高度（像素）
+    """
+    # 全局搜索框对象
     global search_edit
-    from PyQt5.QtCore import QParallelAnimationGroup, QPropertyAnimation, QEasingCurve, QRect
 
-    # 停止现有动画
+    # 停止现有动画并清理
     if hasattr(search_edit, 'animation') and search_edit.animation:
         search_edit.animation.stop()
         search_edit.animation.deleteLater()
@@ -1072,60 +1088,64 @@ def animate_search_edit_height(target_height):
     # 判断是放大还是缩小
     is_expanding = target_height > search_edit.height()
 
-    # 高度动画
+    # 1. 高度动画：调整搜索框的最小高度
     height_animation = QPropertyAnimation(search_edit, b"minimumHeight")
-    height_animation.setDuration(1000)
-    height_animation.setStartValue(search_edit.height())
-    height_animation.setEndValue(target_height)
-    height_animation.setEasingCurve(QEasingCurve.OutElastic if is_expanding else QEasingCurve.InElastic)
+    height_animation.setDuration(300)  # 动画持续时间 500 毫秒
+    height_animation.setStartValue(search_edit.height())  # 起始高度为当前高度
+    height_animation.setEndValue(target_height)  # 目标高度
+    # 放大时使用弹性曲线，缩小时使用平滑二次曲线
+    height_animation.setEasingCurve(QEasingCurve.OutElastic if is_expanding else QEasingCurve.InOutQuad)
 
-    # 缩放动画
+    # 2. 缩放动画：调整搜索框的整体几何形状
     scale_animation = QPropertyAnimation(search_edit, b"geometry")
-    scale_animation.setDuration(1000)
-    current_geometry = search_edit.geometry()
-    scale_factor = 1.0 if is_expanding else 1.0
-    target_width = int(current_geometry.width() * scale_factor)
+    scale_animation.setDuration(10)  # 动画持续时间 50 毫秒
+    current_geometry = search_edit.geometry()  # 当前几何形状
+    scale_factor = 1.0  # 保持宽度不变
+    target_width = int(current_geometry.width() * scale_factor)  # 目标宽度
     target_geometry = QRect(
-        current_geometry.x() - int((target_width - current_geometry.width()) / 2),
-        current_geometry.y(),
-        target_width,
-        target_height
+        current_geometry.x() - int((target_width - current_geometry.width()) / 2),  # 水平居中
+        current_geometry.y(),  # 保持 Y 坐标不变
+        target_width,  # 目标宽度
+        target_height  # 目标高度
     )
-    scale_animation.setStartValue(current_geometry)
-    scale_animation.setEndValue(target_geometry)
-    scale_animation.setEasingCurve(QEasingCurve.OutElastic if is_expanding else QEasingCurve.InElastic)
+    scale_animation.setStartValue(current_geometry)  # 起始几何形状
+    scale_animation.setEndValue(target_geometry)  # 目标几何形状
+    # 放大时使用弹性曲线，缩小时使用平滑二次曲线
+    scale_animation.setEasingCurve(QEasingCurve.OutElastic if is_expanding else QEasingCurve.InOutQuad)
 
-    # 抖动动画
+    # 3. 抖动动画：模拟轻微左右抖动效果，仅在放大时应用
     shake_animation = QPropertyAnimation(search_edit, b"pos")
-    shake_animation.setDuration(0)
-    current_pos = search_edit.pos()
-    shake_animation.setStartValue(current_pos)
+    shake_animation.setDuration(50)  # 设置抖动动画持续时间为 600 毫秒
+    current_pos = search_edit.pos()  # 当前位置
+    shake_animation.setStartValue(current_pos)  # 起始位置
     if is_expanding:
+        # 放大时，抖动：向右 4 像素，再向左 4 像素
         shake_animation.setKeyValueAt(0.3, current_pos + QPoint(4, 0))
         shake_animation.setKeyValueAt(0.6, current_pos + QPoint(-4, 0))
+        shake_animation.setEasingCurve(QEasingCurve.OutElastic)  # 放大时使用弹性曲线
     else:
-        shake_animation.setKeyValueAt(0.3, current_pos + QPoint(-4, 0))
-        shake_animation.setKeyValueAt(0.6, current_pos + QPoint(4, 0))
-    shake_animation.setEndValue(current_pos)
-    shake_animation.setEasingCurve(QEasingCurve.OutElastic if is_expanding else QEasingCurve.InElastic)
+        # 缩小时，无抖动，直接保持原位置
+        shake_animation.setKeyValueAt(0.5, current_pos)  # 中间点保持原位置
+        shake_animation.setEasingCurve(QEasingCurve.InOutQuad)  # 平滑二次曲线
+    shake_animation.setEndValue(current_pos)  # 最终回到原位置
 
-    # 透明度动画（调整为更温和）
+    # 4. 透明度动画（调整为更温和）
     opacity_animation = QPropertyAnimation(search_edit, b"windowOpacity")
-    opacity_animation.setDuration(600)
+    opacity_animation.setDuration(50)  # 动画持续时间 50 毫秒
     opacity_animation.setStartValue(1.0)  # 从完全不透明开始
     opacity_animation.setKeyValueAt(0.4, 0.97)  # 更温和的透明度变化
-    opacity_animation.setEndValue(1.0)
-    opacity_animation.setEasingCurve(QEasingCurve.InOutQuad)
+    opacity_animation.setEndValue(1.0)  # 最终恢复完全不透明
+    opacity_animation.setEasingCurve(QEasingCurve.InOutQuad)  # 平滑二次缓动曲线
 
-    # 并行动画组
+    # 创建并行动画组，组合所有动画
     animation_group = QParallelAnimationGroup()
     animation_group.addAnimation(height_animation)
     animation_group.addAnimation(scale_animation)
     animation_group.addAnimation(shake_animation)
     animation_group.addAnimation(opacity_animation)
-    animation_group.start()
+    animation_group.start()  # 启动动画
 
-    # 保存引用
+    # 保存动画引用，防止被垃圾回收
     search_edit.animation = animation_group
 
 
@@ -1343,7 +1363,6 @@ def create_main_window():
         QPushButton {
             font-size: 15px;  /* 调整字体大小以优化显示 */
             padding: 0px;     /* 移除内边距，确保居中 */
-           
             text-align: center; /* 强制文本/图标居中 */
         }
     """)
@@ -2212,8 +2231,8 @@ def toggle_night_mode():
             background-color: #F0F2F5;  /* 与日间模式主窗口一致 */
         """)
         title_bar.setStyleSheet("background-color: #F0F2F5; border-top-left-radius: 15px; border-top-right-radius: 15px;")
-        # 恢复搜索框高度
-        animate_search_edit_height(50 if not english_mode else 250)
+
+
 
         # 恢复窗口标题栏颜色（仅适用于 Windows）
         if sys.platform == "win32":
@@ -4346,14 +4365,14 @@ class UnifiedItemDelegate(QStyledItemDelegate):
             self.selected_color = QColor("#F5F5F5")  # 夜间模式选中颜色：浅白色
             self.hover_color = QColor("#F5F5F5")  # 夜间模式悬停颜色：稍亮的浅白色
             self.shadow_color = QColor(200, 200, 200, 60)  # 夜间模式阴影颜色：较亮的灰白色
-            self.selected_text_color = QColor("#ffffff")  # 夜间模式选中字体颜色：白色
+            self.selected_text_color = QColor("#FFFFFF")  # 夜间模式选中字体颜色：白色
         else:
             self.even_color = QColor("#F7F9FC")  # 日间模式偶数行颜色：浅蓝灰色，干净高级
             self.odd_color = QColor("#F7F9FC")  # 日间模式奇数行颜色：稍深的蓝灰色，柔和对比
             self.selected_color = QColor("#F5F5F5")  # 日间模式选中颜色：浅蓝色，现代感
             self.hover_color = QColor("#F5F5F5")  # 日间模式悬停颜色：浅灰蓝色，优雅过渡
-            self.shadow_color = QColor(50, 50, 50, 50)  # 日间模式阴影颜色：深灰色，柔和高雅
-            self.selected_text_color = QColor("#000000")  # 日间模式选中字体颜色：黑色
+            self.shadow_color = QColor(200, 200, 200, 60)  # 日间模式阴影颜色：深灰色，柔和高雅
+            self.selected_text_color = QColor("#004654")  # 日间模式选中字体颜色：黑色
 
     def paint(self, painter, option, index):
         """
@@ -4455,6 +4474,7 @@ class UnifiedItemDelegate(QStyledItemDelegate):
             # 夜间模式，悬停或选中：左白右黑（#FFFFFF -> #000000）
             start_color = default_start_color  # #FFFFFF
             end_color = default_end_color  # #000000
+
             start_x = rect_f.left() * (1 - eased_progress) + rect_f.right() * eased_progress
             end_x = rect_f.right() * (1 - eased_progress) + rect_f.left() * eased_progress
         elif is_selected_or_hovered:
