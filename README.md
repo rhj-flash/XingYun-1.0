@@ -1,9 +1,9 @@
-=======
-![示例图片](C:\Users\Rhj17\Pictures\Screenshots\1.png)
-
-
 # Python脚本小工具（python script）
 # 欢迎使用行云！
+
+![示例图片](https://github.com/rhj-flash/XingYun-1.0/blob/master/example_photo/1.png)
+![示例图片](https://github.com/rhj-flash/XingYun-1.0/blob/master/example_photo/2.png)
+![示例图片](https://github.com/rhj-flash/XingYun-1.0/blob/master/example_photo/3.gif)
 
 ```plaintext
 
