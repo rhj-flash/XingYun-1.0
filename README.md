@@ -1,6 +1,7 @@
 # Python脚本小工具（python script）
 # 欢迎使用行云！
-<img src="https://raw.githubusercontent.com/rhj-flash/XingYun-1.0/master/example_photo/3.gif" width="300" height="200" alt="示例 GIF">
+<img src="https://raw.githubusercontent.com/rhj-flash/XingYun-1.0/master/example_photo/3.gif" width="1040" height="768" alt="示例 GIF">
+
 ![示例图片](https://github.com/rhj-flash/XingYun-1.0/blob/master/example_photo/1.png)
 ![示例图片](https://github.com/rhj-flash/XingYun-1.0/blob/master/example_photo/2.png)
 
