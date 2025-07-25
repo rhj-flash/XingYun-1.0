@@ -10,7 +10,7 @@ from PyQt5.QtCore import QStringListModel, QTranslator, QCoreApplication, QPrope
 from PyQt5.QtGui import QColor, QPalette
 from PyQt5.QtGui import QFontMetrics, QPainter
 from PyQt5.QtGui import QImage, QLinearGradient
-from PyQt5.QtWidgets import QGroupBox
+from PyQt5.QtWidgets import QGroupBox, QAction
 from PyQt5.QtWidgets import (
     QHBoxLayout, QSplitter, QCompleter, QListWidgetItem, QDesktopWidget, QMenu, QSizePolicy, QStyledItemDelegate,
     QStyle, QGridLayout, QToolButton
@@ -3290,6 +3290,7 @@ def setup_context_menu(list_widget, display_area):
         execute_action = menu.addAction(tr("执行脚本"))
         modify_name_action = menu.addAction(tr("重命名"))
         modify_path_action = menu.addAction(tr("修改路径"))
+        reload_icon_action = menu.addAction(tr("重新加载图标"))
 
         # 显示菜单并获取用户选择
         action = menu.exec_(list_widget.mapToGlobal(pos))
@@ -3368,6 +3369,42 @@ def setup_context_menu(list_widget, display_area):
                             QMessageBox.information(None, tr("成功"), tr("合并脚本已更新"))
                         else:
                             appendLogWithEffect(display_area, f"更新合并脚本 '{script_name}' 失败\n")
+
+        elif action == reload_icon_action:
+            script_data = selected_item.data(Qt.UserRole)
+            if not script_data:
+                appendLogWithEffect(display_area, "错误：无法获取脚本数据\n")
+                return
+
+            script_name = script_data.get('name', '未知脚本')
+            script_type = script_data.get('type')
+
+            if script_type != 'url':
+                appendLogWithEffect(display_area, f"脚本 '{script_name}' 不是网页脚本，无需重新加载图标\n")
+                return
+
+            current_url = script_data.get('value', '')
+            if not current_url:
+                appendLogWithEffect(display_area, f"脚本 '{script_name}' 网址为空，无法重新加载图标\n")
+                return
+
+            # 判断并修改网址末尾的 / 符号
+            new_url = current_url.rstrip('/') if current_url.endswith('/') else current_url + '/'
+
+            # 更新脚本列表中的网址
+            success, old_url = update_script_path(script_list, script_name, new_url, display_area)
+            if success:
+                script_data['value'] = new_url
+                selected_item.setData(Qt.UserRole, script_data)
+                # 重置图标为默认图标
+                selected_item.setIcon(QIcon(DEFAULT_ICON_PATH))
+                # 重新加载图标
+                get_website_favicon(new_url, lambda icon: selected_item.setIcon(icon))
+                appendLogWithEffect(display_area,
+                                    f"脚本 '{script_name}' 图标重新加载，网址已更新: {old_url} -> {new_url}\n")
+                QMessageBox.information(None, tr("成功"), tr("图标重新加载完成"))
+            else:
+                appendLogWithEffect(display_area, f"脚本 '{script_name}' 图标重新加载失败\n")
 
     list_widget.customContextMenuRequested.connect(context_menu_requested)
 
@@ -4656,6 +4693,55 @@ class SmoothListWidget(QListWidget):
         self.timer.start(12)
 
         self.model().rowsInserted.connect(self.on_rows_inserted)
+
+    def show_context_menu(self, pos):
+        """
+        显示右键上下文菜单
+        参数:
+            pos: 鼠标点击的位置（QPoint）
+        """
+        item = self.itemAt(pos)
+        if not item:
+            return
+        menu = QMenu(self)
+        menu.setStyleSheet("""
+            QMenu {
+                background-color: #F5F7FA;
+                border: 1px solid #D0D0D0;
+                border-radius: 8px;
+                font-family: 'Microsoft YaHei', Arial, sans-serif;
+                font-size: 14px;
+                color: #222222;
+            }
+            QMenu::item {
+                padding: 8px 20px;
+                background-color: transparent;
+            }
+            QMenu::item:selected {
+                background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
+                                                stop:0 rgba(160, 160, 160, 1), stop:1 rgba(120, 120, 120, 1));
+                border-radius: 4px;
+                color: #222222;
+            }
+        """)
+        reload_icon_action = QAction("重新加载图标", self)
+        reload_icon_action.triggered.connect(lambda: self.reload_icon(item))
+        menu.addAction(reload_icon_action)
+        menu.exec_(self.mapToGlobal(pos))
+
+    def reload_icon(self, item):
+        """
+        重新加载选中项的图标（占位函数）
+        参数:
+            item: 选中的 QListWidgetItem
+        """
+        script_data = item.data(Qt.UserRole)
+        if not script_data:
+            appendLogWithEffect(display_area, "错误：无法获取脚本数据\n")
+            return
+        script_name = script_data.get('name', '未知脚本')
+        appendLogWithEffect(display_area, f"重新加载图标：{script_name}（功能待实现）\n")
+
 
     def update_animations(self):
         """更新所有项的动画状态"""
