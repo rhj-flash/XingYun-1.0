@@ -10,6 +10,16 @@
         "value": "https://www.runoob.com/"
     },
     {
+        "name": "Gemini",
+        "type": "url",
+        "value": "https://gemini.google.com"
+    },
+    {
+        "name": "全栈课程",
+        "type": "url",
+        "value": "https://www.bilibili.com/video/BV1nV4y1s7ZN?spm_id_from=333.788.videopod.episodes&vd_source=6be55cf96cb2a0cd178874467cc26ab1&p=10"
+    },
+    {
         "name": "chat_gpt",
         "type": "url",
         "value": "https://chatgpt.com/"
@@ -30,9 +40,9 @@
         "value": "https://chat.deepseek.com/"
     },
     {
-        "name": "软件网站",
+        "name": "单词学习",
         "type": "url",
-        "value": "https://www.rjsos.com/win"
+        "value": "https://qwerty.kaiyi.cool"
     },
     {
         "name": "GitHub",
@@ -50,11 +60,6 @@
         "value": "https://www.google.com/"
     },
     {
-        "name": "雷神加速器",
-        "type": "file",
-        "value": "D:/雷神/LeiGod_Acc/leigod.exe"
-    },
-    {
         "name": "bilibili.com",
         "type": "url",
         "value": "https://www.bilibili.com/"
@@ -63,6 +68,11 @@
         "name": "VPN_charge(VPN充值网址)",
         "type": "url",
         "value": "https://sakuran.org/"
+    },
+    {
+        "name": "雷神加速器",
+        "type": "file",
+        "value": "D:/雷神/LeiGod_Acc/leigod.exe"
     },
     {
         "name": "Wikipedia（维基百科）",
@@ -78,6 +88,11 @@
         "name": "微信",
         "type": "file",
         "value": "D:/wechat/WeChat.exe"
+    },
+    {
+        "name": "电影",
+        "type": "url",
+        "value": "https://www.chinatownfilm.com/"
     },
     {
         "name": "公式识别网站",
@@ -102,16 +117,16 @@
     {
         "name": "音频文件转换",
         "type": "url",
-        "value": "https://www.bearaudiotool.com/zh/tools-list"
+        "value": "https://www.bearaudiotool.com/zh/tools-list/"
     },
     {
-        "name": "看电影🎬",
+        "name": "软件网站",
         "type": "url",
-        "value": "https://www.kanjuxc.cc/"
+        "value": "https://www.rjsos.com/win"
     },
     {
-        "name": "动漫",
+        "name": "GIF制作（拖入视频后直接导出GIF  10帧）",
         "type": "url",
-        "value": "https://www.zkk79.com/"
+        "value": "https://www.photopea.com/"
     }
 ]
