@@ -3,6 +3,12 @@ import os
 import re
 import json
 import platform
+import shutil
+import sys
+import win32con
+import win32gui
+import win32ui
+from PyQt5.QtGui import QFontMetricsF, QPixmap, QIcon, QImage
 import psutil
 import GPUtil
 import subprocess
@@ -21,18 +27,29 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import QThread, pyqtSignal, Qt
 from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
+from utils import get_resource_path, CACHE_LOCK, ICON_CACHE, ICON_EXECUTOR  # 从新文件导入
 
-from window import get_resource_path
+
+# 脚本路径
+scripts_path = get_resource_path("resources/scripts.json")
+
+# 默认图标路径
+DEFAULT_ICON_PATH = get_resource_path('imge.png')
 
 # 缓存机制
 CACHE = {}
+
+# 线程池
+ICON_EXECUTOR = ThreadPoolExecutor(max_workers=5)
+
 
 # **提前加载字典文件**
 dictionary_path = get_resource_path('english_words.txt')
 # **构建索引**
 word_to_translation = {}  # 直接查找单词 -> 翻译
 translation_to_word = {}  # 直接查找翻译 -> 单词
-all_words = []  # 仅存储所有英文单词，用于模糊匹配
+all_words = []  # 仅存储所有英文单词，用于模糊匹配功能
 
 dictionary_data = []
 
@@ -61,6 +78,152 @@ else:
 
 # 多线程执行器
 executor = ThreadPoolExecutor(max_workers=5)
+
+
+
+
+def get_website_favicon(url, callback=None):
+    """异步获取网站 favicon"""
+    def fetch_icon():
+        with CACHE_LOCK:
+            if url in ICON_CACHE:
+                return ICON_CACHE[url]
+        try:
+            if not url.startswith(('http://', 'https://')):
+                url_normalized = 'https://' + url
+            else:
+                url_normalized = url
+            favicon_url = url_normalized.rstrip('/') + '/favicon.ico'
+            response = requests.get(favicon_url, timeout=2)
+            if response.status_code == 200:
+                pixmap = QPixmap()
+                if pixmap.loadFromData(response.content):
+                    icon = QIcon(pixmap)
+                    if not icon.isNull():
+                        with CACHE_LOCK:
+                            ICON_CACHE[url] = icon
+                        return icon
+        except Exception:
+            pass
+        # 返回默认图标
+        default_icon = QIcon(DEFAULT_ICON_PATH)
+        with CACHE_LOCK:
+            ICON_CACHE[url] = default_icon
+        return default_icon
+
+    if callback:
+        future = ICON_EXECUTOR.submit(fetch_icon)
+        future.add_done_callback(lambda f: callback(f.result()))
+        return QIcon(DEFAULT_ICON_PATH)  # 立即返回默认图标
+    else:
+        return fetch_icon()
+
+
+def get_file_icon(file_path, callback=None):
+    """
+    异步获取文件图标。
+
+    此函数通过pywin32库从Windows系统中提取文件图标，并将其转换为QIcon对象。
+    它使用缓存机制来避免重复提取，并通过线程池异步执行以防止UI阻塞。
+    同时，它使用try...finally块来确保图标句柄在使用后被正确销毁，防止资源泄露。
+
+    Args:
+        file_path (str): 文件的完整路径。
+        callback (callable, optional): 获取图标后的回调函数。默认为 None。
+
+    Returns:
+        QIcon: 如果是异步调用则立即返回一个默认图标，否则返回获取到的文件图标。
+    """
+
+    def fetch_icon():
+        """
+        内部函数，负责在工作线程中实际获取图标。
+        """
+        # 加锁以确保缓存访问的线程安全
+        with CACHE_LOCK:
+            if file_path in ICON_CACHE:
+                return ICON_CACHE[file_path]
+
+        icon = QIcon(DEFAULT_ICON_PATH)  # 默认图标
+        large_icon_handle, small_icon_handle = 0, 0
+
+        try:
+            if platform.system() == "Windows" and os.path.exists(file_path):
+                # 使用 win32gui.ExtractIconEx 提取大图标和小的图标
+                # 传入0获取第一个图标
+                large_icons, small_icons = win32gui.ExtractIconEx(file_path, 0)
+
+                if large_icons:
+                    # 仅处理第一个大图标
+                    large_icon_handle = large_icons[0]
+
+                    # 创建一个空的 QPixmap 对象
+                    pixmap = QPixmap(32, 32)
+                    pixmap.fill(Qt.transparent)
+
+                    # 获取屏幕的设备上下文
+                    hdc = win32ui.CreateDCFromHandle(win32gui.GetDC(0))
+
+                    # 创建一个兼容的位图
+                    hbmp = win32ui.CreateBitmap()
+                    hbmp.CreateCompatibleBitmap(hdc, 32, 32)
+
+                    # 创建内存设备上下文并选择位图
+                    mem_dc = hdc.CreateCompatibleDC()
+                    mem_dc.SelectObject(hbmp)
+
+                    # 将图标绘制到内存设备上下文中
+                    # DI_NORMAL标志表示正常绘制图标
+                    win32gui.DrawIconEx(mem_dc.GetHandle(), 0, 0, large_icon_handle, 32, 32, 0, None,
+                                        win32con.DI_NORMAL)
+
+                    # 从位图中提取图像数据并加载到 QPixmap
+                    bmpinfo = hbmp.GetInfo()
+                    data = hbmp.GetBitmapBits(True)
+                    # 使用QImage从原始位图数据创建图像对象
+                    img = QImage(data, bmpinfo['bmWidth'], bmpinfo['bmHeight'], QtGui.QImage.Format_ARGB32)
+
+                    # 检查img是否有效
+                    if not img.isNull():
+                        pixmap = QPixmap.fromImage(img)
+                        # 将 QPixmap 转换为 QIcon
+                        icon = QIcon(pixmap)
+
+                    # 销毁内存设备上下文和位图
+                    mem_dc.DeleteDC()
+                    win32gui.DeleteObject(hbmp.GetHandle())
+
+                if icon.isNull():
+                    # 如果获取失败，使用默认图标
+                    icon = QIcon(DEFAULT_ICON_PATH)
+
+            # 缓存图标
+            with CACHE_LOCK:
+                ICON_CACHE[file_path] = icon
+            return icon
+        except Exception as e:
+            # 捕获并打印异常，但程序继续运行
+            print(f"❌ 获取文件图标失败: {file_path}, 错误: {e}")
+            with CACHE_LOCK:
+                ICON_CACHE[file_path] = icon
+            return icon
+        finally:
+            # 确保在任何情况下都销毁图标句柄以防止资源泄漏
+            if large_icon_handle:
+                win32gui.DestroyIcon(large_icon_handle)
+            if small_icon_handle:
+                win32gui.DestroyIcon(small_icon_handle)
+
+    if callback:
+        # 如果提供了回调函数，则异步执行
+        future = ICON_EXECUTOR.submit(fetch_icon)
+        future.add_done_callback(lambda f: callback(f.result()))
+        return QIcon(DEFAULT_ICON_PATH)  # 立即返回默认图标，UI不会被阻塞
+    else:
+        # 如果没有回调函数，则同步执行
+        return fetch_icon()
+
+
 
 def appendLog(log_text_edit, message):
     log_text_edit.append(message)
@@ -240,7 +403,7 @@ class LogUpdater(QThread):
     update_signal = pyqtSignal(str)  # 发送更新文本的信号
     finished_signal = pyqtSignal()   # 发送完成信号
 
-    def __init__(self, log_text_edit, message, speed=1, batch_size=10):
+    def __init__(self, log_text_edit, message, speed=1, batch_size=1):
         """
         :param log_text_edit: 日志显示区域
         :param message: 需要显示的内容
@@ -291,47 +454,99 @@ def get_user_input_file(parent):
             name = file_path if len(file_path) <= 10 else file_path.split('/')[-1][:10] + "..."
         return name, file_path
     return None, None
-def save_scripts(scripts, filename=None):
-    filename = filename or get_resource_path('scripts.json')
-    with open(filename, 'w', encoding='utf-8') as file:
-        json.dump(scripts, file, ensure_ascii=False, indent=4)
 
-def load_scripts(filename=None):
-    filename = filename or get_resource_path('scripts.json')
-    if os.path.exists(filename):
-        with open(filename, 'r', encoding='utf-8') as file:
+
+# 获取资源文件路径（支持开发和打包环境）
+def get_resource_path(relative_path):
+    if getattr(sys, 'frozen', False):
+        # 使用 EXE 所在目录作为基准路径
+        base_path = os.path.dirname(sys.executable)
+        resources_dir = os.path.join(base_path, "resources")
+        # 如果资源目录不存在，则复制一份到 EXE 目录下
+        if not os.path.exists(resources_dir):
+            original_resources = os.path.join(sys._MEIPASS, "resources")
+            shutil.copytree(original_resources, resources_dir)
+    else:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
+
+
+
+
+
+# 加载脚本
+def load_scripts():
+    scripts_path = get_resource_path("resources/scripts.json")
+    try:
+        with open(scripts_path, 'r', encoding='utf-8') as file:
             return json.load(file)
-    return []
+    except FileNotFoundError:
+        print(f"脚本文件未找到: {scripts_path}")
+        return []
+    except Exception as e:
+        print(f"加载脚本失败: {e}")
+        return []
+
+# 保存脚本
+def save_scripts(scripts):
+    scripts_path = get_resource_path("resources/scripts.json")
+    try:
+        with open(scripts_path, 'w', encoding='utf-8') as file:
+            json.dump(scripts, file, ensure_ascii=False, indent=4)
+        print(f"脚本已保存到: {scripts_path}")
+    except Exception as e:
+        print(f"保存脚本失败: {e}")
 
 
-def appendLogWithEffect(log_text_edit, message, speed=5, batch_size=50):
+
+
+
+def generateDivider(text_edit):
+    """
+    生成分割线
+    """
+    usable_width = text_edit.document().pageSize().width()  # 获取可用宽度
+    font_metrics = QFontMetricsF(text_edit.font())  # 使用浮点精度计算字体宽度
+    char_width = font_metrics.horizontalAdvance("〰")  # 计算"▓▒░"的像素宽度
+    width = int(usable_width / char_width)  # 计算整行可以放多少个"▓▒░"
+    divider = "〰" * max(1, width-1)  # 确保最少 1 个
+    return divider
+
+def resizeEvent(self, event):
+    """
+    监听窗口大小变化，自动更新日志分割线
+    """
+    if hasattr(self, "display_area"):  # 确保日志窗口存在
+        self.divider = generateDivider(self.display_area)  # 生成新的分割线
+    super().resizeEvent(event)
+
+def appendLogWithEffect(log_text_edit, message, speed=5, batch_size=50, include_timestamp=True):
     """
     使用子线程更新日志，防止阻塞 GUI，并可随时终止
-    :param log_text_edit: 文本显示区域
-    :param message: 需要显示的内容
-    :param speed: 速度（ms），默认 5ms
-    :param batch_size: 每次更新的字符数量，默认 10
     """
+    if include_timestamp:
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S: ')
+        divider = generateDivider(log_text_edit)  # 生成分割线
+        message = f"\n{timestamp}{message}{divider}"
+
     # 先停止已有的日志更新线程
     if hasattr(log_text_edit, "log_updater") and log_text_edit.log_updater.isRunning():
         log_text_edit.log_updater.stop()
         log_text_edit.log_updater.wait()
 
-    # 创建新线程来更新日志
     log_text_edit.log_updater = LogUpdater(log_text_edit, message, speed, batch_size)
 
-    # 在每次更新日志内容时，将光标移动到末尾
     log_text_edit.log_updater.update_signal.connect(lambda text: [
         log_text_edit.setPlainText(text),
-        log_text_edit.moveCursor(QtGui.QTextCursor.End)  # 将光标移动到文本末尾
+        log_text_edit.moveCursor(QtGui.QTextCursor.End)
     ])
 
-    # 在日志更新完成后，滚动到最底部
     log_text_edit.log_updater.finished_signal.connect(lambda: [
         log_text_edit.verticalScrollBar().setValue(log_text_edit.verticalScrollBar().maximum())
     ])
 
     log_text_edit.log_updater.start()  # 启动子线程
+
 def log_message(message):
     print(message)
 # 获取内存条型号函数
@@ -447,7 +662,7 @@ def get_network_info():
                     iface_details[iface_name].append(f"  MAC地址: {addr.address}")
 
         for iface_name, details in iface_details.items():
-            interfaces.append(f"====================================\n{iface_name}:\n" + "\n".join(details) + "\n")
+            interfaces.append(f"〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰\n{iface_name}:\n" + "\n".join(details) + "\n")
 
         CACHE['network_info'] = interfaces
         return CACHE['network_info']
@@ -471,36 +686,38 @@ def get_wifi_info():
         return CACHE['wifi_info']
     try:
         # 获取当前连接的 WiFi 网络信息
-        current_network_output = subprocess.check_output(['netsh', 'wlan', 'show', 'interfaces'], encoding='utf-8')
-        # 尝试匹配 SSID 信息
+        current_network_output = subprocess.check_output(
+            ['netsh', 'wlan', 'show', 'interfaces'],
+            encoding='utf-8',
+            creationflags=subprocess.CREATE_NO_WINDOW,
+            stderr=subprocess.PIPE
+        )
+        # 提取 SSID
         current_network_match = re.search(r"SSID\s*:\s*(.+)", current_network_output)
-        if current_network_match:
-            current_network = current_network_match.group(1).strip()
-        else:
-            current_network = "未知"
+        if not current_network_match:
+            CACHE['wifi_info'] = "WiFi信息: 未连接到任何网络"
+            return CACHE['wifi_info']
+        current_network = current_network_match.group(1).strip()
 
-        # 获取当前连接WiFi的详细信息
-        current_wifi_info = f"========================================WIFI信息==========================================\n\n当前WiFi名称: {current_network}\n{current_network_output}"
+        # 获取当前 WiFi 的密码
+        try:
+            current_profile_output = subprocess.check_output(
+                ['netsh', 'wlan', 'show', 'profile', current_network, 'key=clear'],
+                encoding='utf-8',
+                creationflags=subprocess.CREATE_NO_WINDOW,
+                stderr=subprocess.PIPE
+            )
+            current_password_match = re.search(r"Key Content\s*:\s*(.+)", current_profile_output)
+            current_password = current_password_match.group(1).strip() if current_password_match else "未知"
+        except subprocess.CalledProcessError:
+            current_password = "无法获取（可能需要管理员权限）"
 
-        # 获取当前WiFi的密码
-        current_profile_output = subprocess.check_output(
-            ['netsh', 'wlan', 'show', 'profile', current_network, 'key=clear'], encoding='utf-8')
-        current_password_match = re.search(r"Key Content\s*:\s*(.+)", current_profile_output)
-        current_password = current_password_match.group(1).strip() if current_password_match else "未知"
-        current_wifi_info += f"========================================================================================\n当前WiFi密码: {current_password}\n"
-
-        # 获取当前连接WiFi的其他详细信息
+        # 提取其他信息
         network_type_match = re.search(r"Network type\s*:\s*(.+)", current_network_output)
         network_type = network_type_match.group(1).strip() if network_type_match else "未知"
 
         radio_type_match = re.search(r"Radio type\s*:\s*(.+)", current_network_output)
         radio_type = radio_type_match.group(1).strip() if radio_type_match else "未知"
-
-        receive_rate_match = re.search(r"Receive rate\s*:\s*(.+)", current_network_output)
-        receive_rate = receive_rate_match.group(1).strip() if receive_rate_match else "未知"
-
-        transmit_rate_match = re.search(r"Transmit rate\s*:\s*(.+)", current_network_output)
-        transmit_rate = transmit_rate_match.group(1).strip() if transmit_rate_match else "未知"
 
         signal_match = re.search(r"Signal\s*:\s*(.+)", current_network_output)
         signal = signal_match.group(1).strip() if signal_match else "未知"
@@ -517,73 +734,56 @@ def get_wifi_info():
         connection_mode_match = re.search(r"Connection mode\s*:\s*(.+)", current_network_output)
         connection_mode = connection_mode_match.group(1).strip() if connection_mode_match else "未知"
 
-        current_wifi_info += f"网络类型: {network_type}\n"
-        current_wifi_info += f"无线电类型: {radio_type}\n"
-        current_wifi_info += f"接收速率:同上\n"
-        current_wifi_info += f"发送速率:同上\n"
-        current_wifi_info += f"信号强度: {signal}\n"
-        current_wifi_info += f"信道: {channel}\n"
-        current_wifi_info += f"认证方式: {authentication}\n"
-        current_wifi_info += f"加密方式: {cipher}\n"
-        current_wifi_info += f"连接模式: {connection_mode}\n=====================================WiFi历史日志========================================="
+        # 格式化当前 WiFi 信息
+        current_wifi_info = (
+            f"当前WiFi名称: {current_network}\n"
+            f"当前WiFi密码: {current_password}\n"
+            f"网络类型: {network_type}\n"
+            f"无线电类型: {radio_type}\n"
+            f"信号强度: {signal}\n"
+            f"信道: {channel}\n"
+            f"认证方式: {authentication}\n"
+            f"加密方式: {cipher}\n"
+            f"连接模式: {connection_mode}\n"
+        )
 
+        # 获取历史 WiFi 信息（简化，只取前 5 个）
+        try:
+            profile_list_output = subprocess.check_output(
+                ['netsh', 'wlan', 'show', 'profiles'],
+                encoding='utf-8',
+                creationflags=subprocess.CREATE_NO_WINDOW,
+                stderr=subprocess.PIPE
+            )
+            profile_names = re.findall(r"All User Profile\s*:\s*(.*)", profile_list_output)[:5]
+            recent_wifi_info = "最近连接的 WiFi:\n"
+            for profile_name in profile_names:
+                try:
+                    profile_info_output = subprocess.check_output(
+                        ['netsh', 'wlan', 'show', 'profile', profile_name, 'key=clear'],
+                        encoding='utf-8',
+                        creationflags=subprocess.CREATE_NO_WINDOW,
+                        stderr=subprocess.PIPE
+                    )
+                    password_match = re.search(r"Key Content\s*:\s*(.+)", profile_info_output)
+                    password = password_match.group(1).strip() if password_match else "未知"
+                    recent_wifi_info += f"  WiFi: {profile_name}, 密码: {password}\n"
+                except subprocess.CalledProcessError:
+                    continue
+        except subprocess.CalledProcessError:
+            recent_wifi_info = "最近连接的 WiFi: 无法获取\n"
 
-        # 获取所有WiFi配置文件列表
-        profile_list_output = subprocess.check_output(['netsh', 'wlan', 'show', 'profiles'], encoding='utf-8')
-
-        # 提取所有WiFi配置文件名称
-        profile_names = re.findall(r"All User Profile\s*:\s*(.*)", profile_list_output)
-
-        # 初始化最近连接信息的变量
-        recent_connections = []
-
-        # 遍历每个WiFi配置文件，获取详细信息
-        for profile_name in profile_names:
-            try:
-                profile_info_output = subprocess.check_output(
-                    ['netsh', 'wlan', 'show', 'profile', profile_name, 'key=clear'], encoding='utf-8')
-
-                # 获取密码信息
-                password_match = re.search(r"Key Content\s*:\s*(.+)", profile_info_output)
-                password = password_match.group(1).strip() if password_match else "未知"
-
-                # 获取认证方式
-                authentication_match = re.search(r"Authentication\s*:\s*(.+)", profile_info_output)
-                authentication = authentication_match.group(1).strip() if authentication_match else "未知"
-
-                # 获取加密方式
-                cipher_match = re.search(r"Cipher\s*:\s*(.+)", profile_info_output)
-                cipher = cipher_match.group(1).strip() if cipher_match else "未知"
-
-                # 获取连接模式
-                connection_mode_match = re.search(r"Connection mode\s*:\s*(.+)", profile_info_output)
-                connection_mode = connection_mode_match.group(1).strip() if connection_mode_match else "未知"
-
-                # 添加到最近连接的列表中
-                recent_connections.append((profile_name.strip(), password, authentication, cipher, connection_mode))
-
-            except Exception as e:
-                print(f"获取WiFi配置文件 {profile_name} 信息时出错: {e}")
-
-        # 只显示最近10次连接的不同名称的WiFi信息
-        recent_connections = recent_connections[:10]
-
-        recent_wifi_info = ""
-        for profile_name, password, authentication, cipher, connection_mode in recent_connections:
-            recent_wifi_info += f"========================================================================================\nWiFi名称: {profile_name}\n"
-            recent_wifi_info += f"密码: {password}\n"
-            recent_wifi_info += f"认证方式: {authentication}\n"
-            recent_wifi_info += f"加密方式: {cipher}\n"
-            recent_wifi_info += f"连接模式: {connection_mode}\n"
-
-        # 汇总当前连接和最近连接的信息
-        final_wifi_info = current_wifi_info + "\n以下是最近连接过的WiFi信息：\n" + recent_wifi_info
-
+        # 汇总信息
+        final_wifi_info = f"{current_wifi_info}\n{recent_wifi_info}"
         CACHE['wifi_info'] = final_wifi_info
         return CACHE['wifi_info']
 
+    except subprocess.CalledProcessError as e:
+        print(f"获取 WiFi 信息失败: {e.stderr}")
+        CACHE['wifi_info'] = "WiFi信息: 获取失败"
+        return CACHE['wifi_info']
     except Exception as e:
-        print(f"获取WiFi信息时出错: {e}")
+        print(f"获取 WiFi 信息时出错: {e}")
         CACHE['wifi_info'] = "WiFi信息: 获取失败"
         return CACHE['wifi_info']
 # 子函数：获取并格式化地理位置信息

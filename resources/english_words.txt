@@ -16393,7 +16393,139 @@ category	 n. 种类， 类， 类别
 rival	 adj. 竞争的，对抗的 n. 竞争对手，敌手；可与匹敌的人 vt. 与 …竞争； 与…匹敌， 比得上
 intend	 vt. 想要， 打算； 意思是； 打算使
 snap	 v. 咔嚓折断，啪地绷断；吧嗒一声；猛咬；厉声说话，怒声责骂 adj. 仓促的， 突然的 n. 吧嗒声；快照
-fuck	 v. 肏
+fuck	v. 性交；搞糟；欺骗 n. 性行为；讨厌的人 int. 表示愤怒、厌恶等
+shit	n. 粪便；废话；糟糕的东西 v. 拉屎；欺骗 int. 表示愤怒或失望
+asshole	n. 肛门；混蛋
+bitch	n. 母狗；泼妇 v. 抱怨
+damn	v. 诅咒；谴责 adj. 该死的 int. 表示愤怒或失望
+cunt	n. 女性生殖器；讨厌的人
+bastard	n. 私生子；混蛋
+dick	n. 阴茎；讨厌鬼
+piss	v. 小便 n. 尿
+wanker	n. 手淫者；蠢货
+crap	n. 废话；垃圾 v. 拉屎
+douchebag	n. 冲洗器；讨厌鬼
+motherfucker	n. 混蛋；可恶的人
+twat	n. 女性生殖器；蠢货
+screw	v. 拧紧；欺骗 n. 螺丝；性交
+prick	n. 阴茎；讨厌鬼
+arsehole	n. 肛门；混蛋
+cock	n. 公鸡；阴茎
+sod	n. 草皮；讨厌鬼 v. 诅咒
+bugger	n. 鸡奸者；讨厌鬼 v. 鸡奸
+bullshit	n. 胡说八道 v. 胡说
+jerk	n. 混蛋；急拉 v. 猛拉
+idiot	n. 白痴；傻瓜
+moron	n. 低能者；蠢货
+retard	n. 迟钝者；傻瓜 v. 延迟
+scumbag	n. 卑鄙的人；避孕套
+slut	n. 荡妇；懒妇
+whore	n. 妓女；出卖才华者 v. 卖淫
+dipshit	n. 白痴；蠢货
+faggot	n. 男同性恋者；柴捆
+pussy	n. 猫；女性生殖器；懦夫
+dumbass	n. 蠢货；傻瓜
+jackass	n. 公驴；蠢货
+nutjob	n. 疯子；怪人
+wimp	n. 懦夫；软弱的人
+twit	n. 傻瓜；蠢货
+git	n. 蠢货；讨厌鬼
+bellend	n. 阴茎末端；蠢货
+knobhead	n. 阴茎头；蠢货
+tosser	n. 手淫者；蠢货
+dickhead	n. 阴茎头；蠢货
+arse	n. 屁股；讨厌鬼
+bollocks	n. 睾丸；废话
+cockwomble	n. 蠢货；白痴
+pillock	n. 蠢货；傻瓜
+plonker	n. 蠢货；傻瓜
+prat	n. 屁股；傻瓜
+tosspot	n. 酒鬼；蠢货
+wazzock	n. 蠢货；白痴
+berk	n. 蠢货；傻瓜
+numpty	n. 蠢货；傻瓜
+muppet	n. 木偶；蠢货
+numbnuts	n. 蠢货；傻瓜
+dumbfuck	n. 蠢货；白痴
+shithead	n. 蠢货；讨厌鬼
+fuckwit	n. 蠢货；白痴
+asshat	n. 蠢货；讨厌鬼
+dickweed	n. 蠢货；讨厌鬼
+shitstain	n. 卑鄙的人；污点
+fuckface	n. 蠢货；讨厌鬼
+assclown	n. 蠢货；小丑
+dickwad	n. 蠢货；讨厌鬼
+shitbag	n. 卑鄙的人；蠢货
+fucknugget	n. 蠢货；讨厌鬼
+asswipe	n. 卑鄙的人；蠢货
+dicktard	n. 蠢货；傻瓜
+shitforbrains	n. 蠢货；白痴
+fucktard	n. 蠢货；傻瓜
+assmunch	n. 蠢货；讨厌鬼
+dicknose	n. 蠢货；讨厌鬼
+shitlicker	n. 卑鄙的人；蠢货
+fuckstick	n. 蠢货；讨厌鬼
+assmonkey	n. 蠢货；讨厌鬼
+dickbrain	n. 蠢货；白痴
+shitgibbon	n. 蠢货；讨厌鬼
+fuckbucket	n. 蠢货；讨厌鬼
+assbandit	n. 蠢货；讨厌鬼
+dickfingers	n. 蠢货；讨厌鬼
+shitweasel	n. 蠢货；讨厌鬼
+fucktrumpet	n. 蠢货；讨厌鬼
+asspirate	n. 蠢货；讨厌鬼
+dickcheese	n. 蠢货；讨厌鬼
+shitmagnet	n. 蠢货；讨厌鬼
+fuckwaffle	n. 蠢货；讨厌鬼
+assbiscuit	n. 蠢货；讨厌鬼
+dickjuice	n. 蠢货；讨厌鬼
+shitpuddle	n. 蠢货；讨厌鬼
+fucknoodle	n. 蠢货；讨厌鬼
+assgoblin	n. 蠢货；讨厌鬼
+dicktowel	n. 蠢货；讨厌鬼
+shitstorm	n. 混乱；麻烦
+fuckery	n. 胡闹；愚蠢行为
+asshattery	n. 愚蠢行为；讨厌行为
+dickery	n. 愚蠢行为；讨厌行为
+shitshow	n. 混乱的局面；糟糕的情况
+fuckup	n. 搞砸；失败的人
+assclownery	n. 愚蠢行为；小丑行为
+dickmove	n. 卑鄙行为；讨厌行为
+shittiness	n. 糟糕；低劣
+fuckwittery	n. 愚蠢行为；胡闹
+assholery	n. 混蛋行为；讨厌行为
+dickishness	n. 卑鄙；讨厌
+shittastic	adj. 糟糕的；低劣的
+fucktastic	adj. 糟糕的；愚蠢的
+asshattish	adj. 愚蠢的；讨厌的
+dicktastic	adj. 糟糕的；愚蠢的
+shittiferous	adj. 糟糕的；低劣的
+fuckwitted	adj. 愚蠢的；白痴的
+assholish	adj. 混蛋的；讨厌的
+dickheaded	adj. 愚蠢的；讨厌的
+shitbrained	adj. 愚蠢的；白痴的
+fuckheaded	adj. 愚蠢的；讨厌的
+assclownish	adj. 愚蠢的；小丑般的
+dickbrained	adj. 愚蠢的；白痴的
+shitfaced	adj. 醉醺醺的；糟糕的
+fuckbrained	adj. 愚蠢的；白痴的
+asswipeish	adj. 愚蠢的；讨厌的
+dickfaced	adj. 愚蠢的；讨厌的
+shitheaded	adj. 愚蠢的；讨厌的
+fuckfaced	adj. 愚蠢的；讨厌的
+assmonkeyish	adj. 愚蠢的；讨厌的
+dickheadedness	n. 愚蠢；讨厌
+shitbrainedness	n. 愚蠢；白痴
+fuckheadedness	n. 愚蠢；讨厌
+assclownery	n. 愚蠢行为；小丑行为
+dickbrainedness	n. 愚蠢；白痴
+shitfacedness	n. 醉醺醺；糟糕
+fuckbrainedness	n. 愚蠢；白痴
+asswipeishness	n. 愚蠢；讨厌
+dickfacedness	n. 愚蠢；讨厌
+shitheadedness	n. 愚蠢；讨厌
+fuckfacedness	n. 愚蠢；讨厌
+assmonkeyishness	n. 愚蠢；讨厌
 boat	n. 小船；轮船 v. 划船
 group	n. 组；团体 adj. 群的；团体的 v. 聚合
 nineteen	num. 十九

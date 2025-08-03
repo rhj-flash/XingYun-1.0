@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="8b0d000c-da3e-47a1-a976-bb7ef3da54fa" name="更改" comment="">
+      <change afterPath="$PROJECT_DIR$/build/Xingyun/generated-2f48acbaef536d83c4abc1f40411e07ab30d8af8b84a2a054688cd7a017640b2.ico" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/dist/resources/english_words.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/dist/resources/icon.ico" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/dist/resources/imge.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/dist/resources/scripts.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/dist/resources/update_log.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/resources/icon.ico" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/Xing_yun.spec" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/pythonProject2.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/pythonProject2.iml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/window/Analysis-00.toc" beforeDir="false" afterPath="$PROJECT_DIR$/build/Xingyun/Analysis-00.toc" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/window/EXE-00.toc" beforeDir="false" afterPath="$PROJECT_DIR$/build/Xingyun/EXE-00.toc" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/window/PKG-00.toc" beforeDir="false" afterPath="$PROJECT_DIR$/build/Xingyun/PKG-00.toc" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/window/PYZ-00.pyz" beforeDir="false" afterPath="$PROJECT_DIR$/build/Xingyun/PYZ-00.pyz" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/window/PYZ-00.toc" beforeDir="false" afterPath="$PROJECT_DIR$/build/Xingyun/PYZ-00.toc" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/window/base_library.zip" beforeDir="false" afterPath="$PROJECT_DIR$/build/Xingyun/base_library.zip" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/window/generated-d19c1f4e0daefe512d2c59f6edfaf2acd283cb70a5cd29f1372dd556652a903d.ico" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/window/warn-window.txt" beforeDir="false" afterPath="$PROJECT_DIR$/build/Xingyun/warn-Xingyun.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/window/window.pkg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/window/xref-window.html" beforeDir="false" afterPath="$PROJECT_DIR$/build/Xingyun/xref-Xingyun.html" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/dist/window.exe" beforeDir="false" afterPath="$PROJECT_DIR$/dist/Xingyun.exe" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/function.py" beforeDir="false" afterPath="$PROJECT_DIR$/function.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/icon.ico" beforeDir="false" afterPath="$PROJECT_DIR$/icon.ico" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/resources/english_words.txt" beforeDir="false" afterPath="$PROJECT_DIR$/resources/english_words.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/resources/imge.png" beforeDir="false" afterPath="$PROJECT_DIR$/resources/imge.png" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/resources/scripts.json" beforeDir="false" afterPath="$PROJECT_DIR$/resources/scripts.json" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/resources/update_log.txt" beforeDir="false" afterPath="$PROJECT_DIR$/resources/update_log.txt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/window.py" beforeDir="false" afterPath="$PROJECT_DIR$/window.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/window.spec" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/仓库/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/仓库/README.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/仓库/function.py" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/仓库/resources/english_words.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/仓库/resources/icon.ico" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/仓库/resources/imge.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/仓库/resources/scripts.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/仓库/resources/update_log.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/仓库/window.exe" beforeDir="false" afterPath="$PROJECT_DIR$/build/Xingyun/Xingyun.pkg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/仓库/window.py" beforeDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="MarkdownSettingsMigration">
+    <option name="stateVersion" value="1" />
+  </component>
+  <component name="ProjectId" id="30msqbyjl7ScwUKJRhb7LFEh4V3" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "settings.editor.selected.configurable": "preferences.externalTools"
+  }
+}]]></component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="应用程序级" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="默认任务">
+      <changelist id="8b0d000c-da3e-47a1-a976-bb7ef3da54fa" name="更改" comment="" />
+      <created>1754244276040</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1754244276040</updated>
+    </task>
+    <servers />
+  </component>
+</project>
