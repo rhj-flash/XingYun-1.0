@@ -1,6 +1,6 @@
 # Python脚本小工具（win）
 # 欢迎使用行云！
-## EXE文件：[https://github.com/rhj-flash/XingYun-1.0/blob/master/Xingyun.exe](https://github.com/rhj-flash/XingYun-1.0/blob/master/Xingyun.exe)
+## EXE文件：[https://github.com/rhj-flash/XingYun-1.0/blob/main/dist/Xingyun.exe](https://github.com/rhj-flash/XingYun-1.0/blob/master/Xingyun.exe)
 <img src="https://raw.githubusercontent.com/rhj-flash/XingYun-1.0/master/example_photo/3.gif" width="1040" height="768" alt="示例 GIF">
 
 ![示例图片](https://github.com/rhj-flash/XingYun-1.0/blob/master/example_photo/1.png)
