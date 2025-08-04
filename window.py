@@ -1367,6 +1367,36 @@ def create_main_window():
     title_bar_layout.addWidget(title_label)
     title_bar_layout.addStretch()
 
+    # ****************** 新增 GitHub 按钮代码 ******************
+    # 定义打开 GitHub 链接的函数
+    def open_github_link():
+        """在默认浏览器中打开 GitHub 仓库链接"""
+        webbrowser.open('https://github.com/rhj-flash/XingYun-1.0')
+
+    # 创建 GitHub 按钮
+    github_button = QPushButton()
+    # 尝试加载图标
+    github_icon_path = 'github_icon.ico'  # 假设图标在当前目录下
+    if os.path.exists(github_icon_path):
+        github_button.setIcon(QIcon(github_icon_path))
+    else:
+        # 如果找不到文件，使用一个默认图标或文本
+        github_button.setText("GitHub")
+        github_button.setStyleSheet("""
+                QPushButton {
+                    font-size: 15px;
+                    padding: 0px;
+                    text-align: center;
+                }
+            """)
+        # print(f"警告：未找到 GitHub 图标文件: {github_icon_path}") # 调试语句
+
+    github_button.setFixedSize(35, 35)  # 设置固定大小
+    github_button.clicked.connect(open_github_link)  # 连接点击事件
+    title_bar_layout.addWidget(github_button)  # 将按钮添加到布局中
+    # ****************** 新增代码结束 ******************
+
+
     # 最小化按钮
     min_button = QPushButton("—")  # 使用标准 Unicode 最小化图标
     min_button.setFixedSize(35, 35)
