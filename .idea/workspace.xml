@@ -5,17 +5,16 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="8b0d000c-da3e-47a1-a976-bb7ef3da54fa" name="更改" comment="">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build/Xingyun/Analysis-00.toc" beforeDir="false" afterPath="$PROJECT_DIR$/build/Xingyun/Analysis-00.toc" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build/Xingyun/EXE-00.toc" beforeDir="false" afterPath="$PROJECT_DIR$/build/Xingyun/EXE-00.toc" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build/Xingyun/PKG-00.toc" beforeDir="false" afterPath="$PROJECT_DIR$/build/Xingyun/PKG-00.toc" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build/Xingyun/PYZ-00.pyz" beforeDir="false" afterPath="$PROJECT_DIR$/build/Xingyun/PYZ-00.pyz" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build/Xingyun/Xingyun.pkg" beforeDir="false" afterPath="$PROJECT_DIR$/build/Xingyun/Xingyun.pkg" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build/Xingyun/base_library.zip" beforeDir="false" afterPath="$PROJECT_DIR$/build/Xingyun/base_library.zip" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dist/Xingyun.exe" beforeDir="false" afterPath="$PROJECT_DIR$/dist/Xingyun.exe" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dist/resources/scripts.json" beforeDir="false" afterPath="$PROJECT_DIR$/dist/resources/scripts.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/window.py" beforeDir="false" afterPath="$PROJECT_DIR$/window.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/example_photo/1.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/example_photo/2.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/example_photo/3.gif" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/github_icon.ico" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/resources/english_words.txt" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/resources/icon.ico" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/resources/imge.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/resources/scripts.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/resources/update_log.txt" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -33,12 +32,37 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.externalTools&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "last_opened_file_path": "D:/python/pythonProject2/window.py",
+    "settings.editor.selected.configurable": "preferences.externalTools"
   }
-}</component>
+}]]></component>
+  <component name="RunManager">
+    <configuration name="window" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
+      <module name="pythonProject2" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="C:\Users\Rhj17\AppData\Local\Programs\Python\Python39\python.exe" />
+      <option name="SDK_NAME" value="Python 3.9" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/window.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+  </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="应用程序级" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
     <task active="true" id="Default" summary="默认任务">

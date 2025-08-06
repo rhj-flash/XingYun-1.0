@@ -538,14 +538,14 @@ button_style_night = """
 def ensure_word_file():
     """确保单词表文件可访问"""
     # 1. 尝试从打包资源获取
-    word_path = get_resource_path("english_words.txt")
+    word_path = get_resource_path("resources/english_words.txt")
     if os.path.exists(word_path):
         return word_path
 
     # 2. 尝试从用户目录获取
     user_dir = os.path.join(os.path.expanduser("~"), "Xingyun")
     os.makedirs(user_dir, exist_ok=True)
-    user_path = os.path.join(user_dir, "english_words.txt")
+    user_path = os.path.join(user_dir, "resources/english_words.txt")
 
     if os.path.exists(user_path):
         return user_path
@@ -1376,7 +1376,7 @@ def create_main_window():
     # 创建 GitHub 按钮
     github_button = QPushButton()
     # 尝试加载图标
-    github_icon_path = 'github_icon.ico'  # 假设图标在当前目录下
+    github_icon_path = 'resources/github_icon.ico'  # 假设图标在当前目录下
     if os.path.exists(github_icon_path):
         github_button.setIcon(QIcon(github_icon_path))
     else:
