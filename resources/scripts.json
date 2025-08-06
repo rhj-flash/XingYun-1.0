@@ -80,14 +80,14 @@
         "value": "https://zh.wikipedia.org/"
     },
     {
-        "name": "CSDN",
-        "type": "url",
-        "value": "https://www.csdn.net/?spm=1000.2115.3001.4476"
-    },
-    {
         "name": "微信",
         "type": "file",
         "value": "D:/wechat/WeChat.exe"
+    },
+    {
+        "name": "CSDN",
+        "type": "url",
+        "value": "https://blog.csdn.net/RHJflash?spm=1000.2115.3001.5343/"
     },
     {
         "name": "电影",

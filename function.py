@@ -45,7 +45,7 @@ ICON_EXECUTOR = ThreadPoolExecutor(max_workers=5)
 
 
 # **提前加载字典文件**
-dictionary_path = get_resource_path('english_words.txt')
+dictionary_path = get_resource_path('resources/english_words.txt')
 # **构建索引**
 word_to_translation = {}  # 直接查找单词 -> 翻译
 translation_to_word = {}  # 直接查找翻译 -> 单词

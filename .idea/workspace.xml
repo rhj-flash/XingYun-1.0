@@ -6,15 +6,28 @@
   <component name="ChangeListManager">
     <list default="true" id="8b0d000c-da3e-47a1-a976-bb7ef3da54fa" name="更改" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build/Xingyun/Analysis-00.toc" beforeDir="false" afterPath="$PROJECT_DIR$/build/Xingyun/Analysis-00.toc" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build/Xingyun/EXE-00.toc" beforeDir="false" afterPath="$PROJECT_DIR$/build/Xingyun/EXE-00.toc" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build/Xingyun/PKG-00.toc" beforeDir="false" afterPath="$PROJECT_DIR$/build/Xingyun/PKG-00.toc" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build/Xingyun/PYZ-00.pyz" beforeDir="false" afterPath="$PROJECT_DIR$/build/Xingyun/PYZ-00.pyz" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build/Xingyun/Xingyun.pkg" beforeDir="false" afterPath="$PROJECT_DIR$/build/Xingyun/Xingyun.pkg" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/build/Xingyun/base_library.zip" beforeDir="false" afterPath="$PROJECT_DIR$/build/Xingyun/base_library.zip" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dist/Xingyun.exe" beforeDir="false" afterPath="$PROJECT_DIR$/dist/Xingyun.exe" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/dist/resources/scripts.json" beforeDir="false" afterPath="$PROJECT_DIR$/dist/resources/scripts.json" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/utils.py" beforeDir="false" afterPath="$PROJECT_DIR$/utils.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/resources/icon_cache/008ec4453ff31513f43893cba7aa31c8.ico" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/resources/icon_cache/00ce31733e677f459607cb39f7532d09.ico" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/resources/icon_cache/092edcbc8c971be041c2fe846bacc016.ico" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/resources/icon_cache/1439185a32d1ccc07253574ab00d6dbd.ico" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/resources/icon_cache/16fa15d096f32a70b470bac1aadad02c.ico" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/resources/icon_cache/23afb3a131ff24db692986a04cf39808.ico" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/resources/icon_cache/2a0b028fc94472269a3289a71558f6b6.ico" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/resources/icon_cache/3a123b132f5529b1ec4a7be02394916d.ico" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/resources/icon_cache/456bf5e40061d7e549f42754914a6141.ico" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/resources/icon_cache/52da5c5bdf6f342b4a3529f1564159d1.ico" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/resources/icon_cache/62ba7661fe152cf1aff1d9899ee01de1.ico" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/resources/icon_cache/763e8b085a668167797cd0fb051e1279.ico" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/resources/icon_cache/7aebb198fd8d429e02e4fa866c14afb0.ico" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/resources/icon_cache/a2b7c1160d7f6eda8be66e2e3e5a9f82.ico" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/resources/icon_cache/a5069d05033be7059cbd9afda9a1bbd5.ico" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/resources/icon_cache/c514755e7e8f630388f684eb7c33178f.ico" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/resources/icon_cache/d5f4c2a33eb3451de397bb62365540fb.ico" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/resources/icon_cache/d75277cdffef995a46ae59bdaef1db86.ico" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/resources/icon_cache/dba51bcc527ba93f7fe03868747280d5.ico" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/resources/icon_cache/e0ed1515e1e7fde535fbd6a8f2e09cfb.ico" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/resources/icon_cache/e27e5ab679519e883b982efc5540afb0.ico" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/resources/icon_cache/e9a3780a079279ad69252d16d1158566.ico" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/window.py" beforeDir="false" afterPath="$PROJECT_DIR$/window.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -23,6 +36,11 @@
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="Git.Settings">
+    <option name="RECENT_BRANCH_BY_REPOSITORY">
+      <map>
+        <entry key="$PROJECT_DIR$" value="change" />
+      </map>
+    </option>
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
   <component name="MarkdownSettingsMigration">
@@ -36,9 +54,34 @@
   <component name="PropertiesComponent">{
   &quot;keyToString&quot;: {
     &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;D:/python/pythonProject2/window.py&quot;,
     &quot;settings.editor.selected.configurable&quot;: &quot;preferences.externalTools&quot;
   }
 }</component>
+  <component name="RunManager">
+    <configuration name="window" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
+      <module name="pythonProject2" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="C:\Users\Rhj17\AppData\Local\Programs\Python\Python39\python.exe" />
+      <option name="SDK_NAME" value="Python 3.9" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="false" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/window.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+  </component>
   <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="应用程序级" UseSingleDictionary="true" transferred="true" />
   <component name="TaskManager">
     <task active="true" id="Default" summary="默认任务">
@@ -49,5 +92,28 @@
       <updated>1754244276040</updated>
     </task>
     <servers />
+  </component>
+  <component name="Vcs.Log.Tabs.Properties">
+    <option name="TAB_STATES">
+      <map>
+        <entry key="MAIN">
+          <value>
+            <State>
+              <option name="FILTERS">
+                <map>
+                  <entry key="branch">
+                    <value>
+                      <list>
+                        <option value="main" />
+                      </list>
+                    </value>
+                  </entry>
+                </map>
+              </option>
+            </State>
+          </value>
+        </entry>
+      </map>
+    </option>
   </component>
 </project>

@@ -3,14 +3,14 @@ import threading  # 确保导入 threading 模块
 import time
 from urllib.parse import urlparse, urljoin
 
-from PyQt5.QtCore import QEasingCurve, QParallelAnimationGroup
+from PyQt5.QtCore import QEasingCurve, QParallelAnimationGroup, QFileInfo
 from PyQt5.QtCore import QRect
 from PyQt5.QtCore import QStringListModel, QTranslator, QCoreApplication, QPropertyAnimation, QPoint, QEvent, \
     QTimer, QObject, QRectF, QSize, QDateTime
 from PyQt5.QtGui import QColor, QPalette
 from PyQt5.QtGui import QFontMetrics, QPainter
 from PyQt5.QtGui import QImage, QLinearGradient
-from PyQt5.QtWidgets import QGroupBox, QAction
+from PyQt5.QtWidgets import QGroupBox, QAction, QFileIconProvider
 from PyQt5.QtWidgets import (
     QHBoxLayout, QSplitter, QCompleter, QListWidgetItem, QDesktopWidget, QMenu, QSizePolicy, QStyledItemDelegate,
     QStyle, QGridLayout, QToolButton
@@ -538,14 +538,14 @@ button_style_night = """
 def ensure_word_file():
     """确保单词表文件可访问"""
     # 1. 尝试从打包资源获取
-    word_path = get_resource_path("english_words.txt")
+    word_path = get_resource_path("resources/english_words.txt")
     if os.path.exists(word_path):
         return word_path
 
     # 2. 尝试从用户目录获取
     user_dir = os.path.join(os.path.expanduser("~"), "Xingyun")
     os.makedirs(user_dir, exist_ok=True)
-    user_path = os.path.join(user_dir, "english_words.txt")
+    user_path = os.path.join(user_dir, "resources/english_words.txt")
 
     if os.path.exists(user_path):
         return user_path
@@ -671,29 +671,33 @@ def extract_default_icon():
             print(f"默认图标已提取到: {target_path}")
 
 
-def get_website_favicon(url, callback=None):
+def get_website_favicon(url, script_name, callback=None):
     """
     改进版的网站图标获取函数，支持多种图标获取方式
-    （原代码结构保持不变，仅添加缓存功能）
+    （原代码结构保持不变，仅修改缓存功能）
     """
 
-    # ---------- 新增缓存功能 ----------
-    def get_cache_file(url):
-        """获取缓存文件路径"""
-        url_hash = hashlib.md5(url.encode('utf-8')).hexdigest()
+    def get_cache_file():
+        """
+        获取缓存文件路径，使用脚本名作为文件名。
+        """
         cache_dir = get_resource_path("icon_cache")
-        os.makedirs(cache_dir, exist_ok=True)  # 自动创建目录
-        return os.path.join(cache_dir, f"{url_hash}.ico")
+        os.makedirs(cache_dir, exist_ok=True)
 
-    def load_cached_icon(url):
+        # 使用脚本名作为文件名，确保文件名安全
+        safe_script_name = re.sub(r'[^\w\.-]', '_', script_name)
+
+        file_name = f"{safe_script_name}.ico"
+        return os.path.join(cache_dir, file_name)
+
+    def load_cached_icon():
         """从本地缓存加载图标"""
-        cache_file = get_cache_file(url)
+        cache_file = get_cache_file()
         if os.path.exists(cache_file):
             try:
                 pixmap = QPixmap(cache_file)
                 if not pixmap.isNull():
                     icon = QIcon(pixmap)
-                    # 更新内存缓存
                     with CACHE_LOCK:
                         ICON_CACHE[url] = icon
                     print(f"Loaded from cache: {cache_file}")
@@ -702,17 +706,16 @@ def get_website_favicon(url, callback=None):
                 print(f"Cache read error: {e}")
         return None
 
-    def save_icon_cache(url, icon_data):
+    def save_icon_cache(icon_data):
         """保存图标到本地缓存"""
         try:
-            cache_file = get_cache_file(url)
+            cache_file = get_cache_file()
             with open(cache_file, 'wb') as f:
                 f.write(icon_data)
             print(f"Cached icon: {cache_file}")
         except Exception as e:
             print(f"Cache save failed: {e}")
 
-    # ---------- 原始获取逻辑（完全保持不变） ----------
     def normalize_url(url):
         """规范化URL，添加协议等"""
         if not url.startswith(('http://', 'https://')):
@@ -792,32 +795,27 @@ def get_website_favicon(url, callback=None):
         with CACHE_LOCK:
             if url in ICON_CACHE:
                 return ICON_CACHE[url]
-
-        # 2. 检查本地缓存（新增）
-        cached_icon = load_cached_icon(url)
+        # 2. 检查本地缓存
+        cached_icon = load_cached_icon()
         if cached_icon:
             return cached_icon
-
         # 3. 执行原始获取逻辑
         normalized_url = normalize_url(url)
         if not normalized_url:
             return get_default_icon()
-
         icon_data = try_multiple_icon_sources(normalized_url)
-
         if icon_data:
-            # 4. 保存到缓存（新增）
-            save_icon_cache(url, icon_data)
-
-            # 创建QIcon（原逻辑）
+            # 4. 保存到缓存
+            save_icon_cache(icon_data)
+            # 创建QIcon
             pixmap = QPixmap()
             if pixmap.loadFromData(icon_data):
                 icon = QIcon(pixmap)
                 with CACHE_LOCK:
                     ICON_CACHE[url] = icon
                 return icon
-
         return get_default_icon()
+
 
     # ---------- 异步处理保持不变 ----------
     if callback:
@@ -1376,12 +1374,12 @@ def create_main_window():
     # 创建 GitHub 按钮
     github_button = QPushButton()
     # 尝试加载图标
-    github_icon_path = 'github_icon.ico'  # 假设图标在当前目录下
+    github_icon_path = 'resources/github_icon.ico'  # 假设图标在当前目录下
     if os.path.exists(github_icon_path):
         github_button.setIcon(QIcon(github_icon_path))
     else:
         # 如果找不到文件，使用一个默认图标或文本
-        github_button.setText("GitHub")
+        github_button.setText("Git")
         github_button.setStyleSheet("""
                 QPushButton {
                     font-size: 15px;
@@ -2052,28 +2050,71 @@ def create_main_window():
     # 加载脚本
     scripts = load_scripts()
     for index, script in enumerate(scripts):
-        item = QListWidgetItem(script['name'])
+        # 确保脚本数据完整
+        script_name = script.get('name')
+        if not script_name or not isinstance(script_name, str):
+            print(f"警告: 发现缺少或无效的 'name' 的脚本条目，已跳过。索引: {index}")
+            continue
+
+        item = QListWidgetItem(script_name)
         item.setData(Qt.UserRole, script)
-        item.setIcon(QIcon(DEFAULT_ICON_PATH))
+
+        icon_set = False  # 标志是否已成功设置图标
+
+        # 检查是否为URL类型脚本
+        if script.get('type') == 'url':
+            url = script.get('value')
+            if url and isinstance(url, str):
+                # 优先从本地缓存加载
+                safe_script_name = re.sub(r'[^\w\.-]', '_', script_name)
+                icon_path = os.path.join(get_resource_path('icon_cache'), f'{safe_script_name}.ico')
+
+                if os.path.exists(icon_path):
+                    item.setIcon(QIcon(icon_path))
+                    print(f"已加载缓存图标: '{script_name}'.")
+                    icon_set = True
+                else:
+                    # 缓存不存在，从网络获取并设置
+                    def set_icon(icon):
+                        item.setIcon(icon)
+
+                    get_website_favicon(url, script_name, callback=set_icon)
+                    # 异步获取，暂时不设置 icon_set = True
+            else:
+                print(f"警告: 脚本 '{script_name}' 缺少有效的 URL，将使用默认图标。")
+
+        # 处理本地软件脚本
+        else:
+            script_path = script.get('value')
+            if script_path and isinstance(script_path, str) and os.path.exists(script_path):
+                try:
+                    # 使用 QFileIconProvider 从文件中提取图标
+                    icon = QIcon(QFileIconProvider().icon(QFileInfo(script_path)))
+                    if not icon.isNull():
+                        item.setIcon(icon)
+                        print(f"已从本地文件加载图标: '{script_path}'.")
+                        icon_set = True
+                except Exception as e:
+                    print(f"从本地文件 '{script_path}' 加载图标失败: {e}")
+
+        # 如果以上逻辑都没有成功设置图标，则使用默认图标
+        if not icon_set:
+            item.setIcon(QIcon(DEFAULT_ICON_PATH))
+
         if index % 2 == 0:
             item.setBackground(QColor("#F0F0F0"))
         else:
             item.setBackground(QColor("#D9D9D9"))
         list_widget.addItem(item)
         completer_model.insertRow(0)
-        completer_model.setData(completer_model.index(0), script['name'])
-        if script['type'] == 'url':
-            get_website_favicon(script['value'], lambda icon, i=index: list_widget.item(i).setIcon(icon))
-        elif script['type'] == 'file':
-            get_file_icon(script['value'], lambda icon, i=index: list_widget.item(i).setIcon(icon))
+        completer_model.setData(completer_model.index(0), script_name)
 
     # 设置右键菜单
-    setup_context_menu(list_widget, display_area)
+    setup_context_menu(list_widget, display_area, completer_model)
     # 显示欢迎界面功能
     display_welcome_screen(display_area)
     update_item_colors()
     return main_window
-
 
 def toggle_english_mode():
     global english_mode, english_learn_button, list_widget, create_script_button, remove_selected_button, clear_button, update_log_button, search_edit, display_area, original_english_btn_style
@@ -3048,6 +3089,54 @@ class RenameScriptDialog(QDialog):
         super().__init__(parent)
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
         self.setWindowTitle(tr("重命名脚本"))
+        self.setStyleSheet("""
+                            QDialog {
+                                background-color: #F5F7FA;
+                                border-radius: 12px;
+                                border: 1px solid #D0D0D0;
+                                color: #000000;  /* 添加默认字体色 */
+                                font-family: 'Microsoft YaHei', Arial, sans-serif;
+                            }
+                            QLabel {
+                                color: #000000;  /* 标签字体色 */
+                                font-size: 14px;
+                                padding: 4px;
+                            }
+                            QLineEdit {
+                                background-color: #FFFFFF;  /* 区分输入区域 */
+                                border: 1px solid #BBBBBB;
+                                border-radius: 8px;
+                                padding: 8px 12px;
+                                font-size: 14px;
+                                color: #000000;  /* 输入框字体色 */
+                            }
+                            QPushButton {
+                                background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
+                                                                stop:0 rgba(200, 200, 200, 1), stop:1 rgba(160, 160, 160, 1));
+                                border: 1px solid #BBBBBB;
+                                border-radius: 8px;
+                                color: #222222;
+                                font-size: 18px;
+                                font-family: 'Comic Sans MS', 'KaiTi', sans-serif;
+                                font-weight: bold;
+                                padding: 2px 8px;
+                                text-align: center;
+                                margin: 0;
+                                box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+                            }
+                            QPushButton:hover {
+                                background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
+                                                                stop:0 rgba(160, 160, 160, 1), stop:1 rgba(120, 120, 120, 1));
+                                border: 1px solid #AAAAAA;
+                            }
+                            QPushButton:pressed {
+                                background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
+                                                                stop:0 rgba(120, 120, 120, 1), stop:1 rgba(90, 90, 90, 1));
+                                border: 1px solid #999999;
+                                box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+                                transform: scale(0.95); /* 添加按下时的缩小效果 */
+                            }
+                        """)
         self.setFixedSize(400, 200)
         self.old_name = old_name
         self.init_ui()
@@ -3071,7 +3160,7 @@ class RenameScriptDialog(QDialog):
         self.name_edit = QLineEdit()
         self.name_edit.setText(self.old_name)
         self.name_edit.setPlaceholderText(tr("请输入新名称"))
-        self.name_edit.setMinimumWidth(300)
+        self.name_edit.setMinimumWidth(100)
         layout.addWidget(self.name_edit)
 
         # 按钮区域
@@ -3131,6 +3220,54 @@ class ModifyPathDialog(QDialog):
         self.script_type = script_type
         self.current_path = current_path
         self.setWindowTitle(tr("修改路径") if script_type == 'file' else tr("修改网址"))
+        self.setStyleSheet("""
+                            QDialog {
+                                background-color: #F5F7FA;
+                                border-radius: 18px;
+                                border: 1px solid #D0D0D0;
+                                color: #000000;  /* 添加默认字体色 */
+                                font-family: 'Microsoft YaHei', Arial, sans-serif;
+                            }
+                            QLabel {
+                                color: #000000;  /* 标签字体色 */
+                                font-size: 14px;
+                                padding: 4px;
+                            }
+                            QLineEdit {
+                                background-color: #FFFFFF;  /* 区分输入区域 */
+                                border: 1px solid #BBBBBB;
+                                border-radius: 8px;
+                                padding: 8px 12px;
+                                font-size: 14px;
+                                color: #000000;  /* 输入框字体色 */
+                            }
+                            QPushButton {
+                                background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
+                                                                stop:0 rgba(200, 200, 200, 1), stop:1 rgba(160, 160, 160, 1));
+                                border: 1px solid #BBBBBB;
+                                border-radius: 8px;
+                                color: #222222;
+                                font-size: 18px;
+                                font-family: 'Comic Sans MS', 'KaiTi', sans-serif;
+                                font-weight: bold;
+                                padding: 2px 8px;
+                                text-align: center;
+                                margin: 0;
+                                box-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+                            }
+                            QPushButton:hover {
+                                background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
+                                                                stop:0 rgba(160, 160, 160, 1), stop:1 rgba(120, 120, 120, 1));
+                                border: 1px solid #AAAAAA;
+                            }
+                            QPushButton:pressed {
+                                background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
+                                                                stop:0 rgba(120, 120, 120, 1), stop:1 rgba(90, 90, 90, 1));
+                                border: 1px solid #999999;
+                                box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+                                transform: scale(0.95); /* 添加按下时的缩小效果 */
+                            }
+                        """)
         self.setFixedSize(500, 250)
         self.init_ui()
 
@@ -3291,8 +3428,8 @@ class MergeScriptNameDialog(QDialog):
         return self.name_edit.text().strip()
 
 
-def setup_context_menu(list_widget, display_area):
-    """设置 QListWidget 的右键菜单"""
+def setup_context_menu(list_widget, display_area, completer_model):
+    """设置 QListWidget 的右键菜单，并连接所有功能"""
     list_widget.setContextMenuPolicy(Qt.CustomContextMenu)
 
     def context_menu_requested(pos):
@@ -3300,10 +3437,6 @@ def setup_context_menu(list_widget, display_area):
         if not item:
             return
 
-        script_list = load_scripts()
-        selected_item = item
-
-        # 创建右键菜单
         menu = QMenu(list_widget)
         menu.setStyleSheet("""
             QMenu {
@@ -3327,127 +3460,183 @@ def setup_context_menu(list_widget, display_area):
             }
         """)
 
-        # 添加菜单项
         execute_action = menu.addAction(tr("执行脚本"))
         modify_name_action = menu.addAction(tr("重命名"))
         modify_path_action = menu.addAction(tr("修改路径"))
         reload_icon_action = menu.addAction(tr("重新加载图标"))
 
-        # 显示菜单并获取用户选择
-        action = menu.exec_(list_widget.mapToGlobal(pos))
-        if action == execute_action:
-            execute_script(selected_item, display_area)
+        # 将菜单项连接到各自的逻辑函数
+        execute_action.triggered.connect(lambda: execute_script_from_context(item, display_area))
 
-        elif action == modify_name_action:
-            old_name = selected_item.text()
-            dialog = RenameScriptDialog(list_widget, old_name)
-            if dialog.exec_():
-                new_name = dialog.get_new_name()
-                if new_name and new_name != old_name:
-                    script_data = next((s for s in script_list if s['name'] == old_name), None)
-                    if script_data:
-                        script_data['name'] = new_name
-                        selected_item.setText(new_name)
-                        save_current_scripts()
-                        appendLogWithEffect(display_area, f"脚本 '{old_name}' 已重命名为 '{new_name}'\n")
-                        QMessageBox.information(None, tr("成功"), tr("脚本名称已更新"))
+        # **关键修复：重命名逻辑**
+        def handle_rename():
+            new_name = show_rename_dialog(list_widget, item)
+            if new_name:
+                old_name = item.text()
+                script_data = item.data(Qt.UserRole)
+                if script_data:
+                    # 更新内存中的数据
+                    script_data['name'] = new_name
+                    item.setText(new_name)
+                    item.setData(Qt.UserRole, script_data)
 
-        elif action == modify_path_action:
-            script_name = selected_item.text()
-            script_data = next((s for s in script_list if s['name'] == script_name), None)
-            if not script_data:
-                return
+                    # 更新 completer_model
+                    completer_model.setStringList(
+                        [list_widget.item(i).text() for i in range(list_widget.count())]
+                    )
 
-            script_type = script_data.get('type')
-            current_path = script_data.get('value', '')
+                    # **关键修复：保存修改后的脚本列表到文件**
+                    save_scripts_to_file(list_widget)
 
-            if script_type == 'url':
-                dialog = ModifyPathDialog(list_widget, 'url', current_path)
-                if dialog.exec_():
-                    new_url = dialog.get_new_path()
-                    if new_url:
-                        success, old_path = update_script_path(script_list, script_name, new_url, display_area)
-                        if success:
-                            script_data['value'] = new_url
-                            selected_item.setData(Qt.UserRole, script_data)
-                            selected_item.setIcon(QIcon(DEFAULT_ICON_PATH))
-                            get_website_favicon(new_url, lambda icon: selected_item.setIcon(icon))
-                            appendLogWithEffect(display_area,
-                                                f"脚本 '{script_name}' 网址已修改: {old_path} -> {new_url}\n")
-                            QMessageBox.information(None, tr("成功"), tr("网址已更新"))
-                        else:
-                            appendLogWithEffect(display_area, f"更新脚本 '{script_name}' 网址失败\n")
+                    appendLogWithEffect(display_area, f"脚本 '{old_name}' 已重命名为 '{new_name}'\n")
+                    QMessageBox.information(None, tr("成功"), tr("脚本名称已更新"))
+                else:
+                    QMessageBox.warning(None, tr("错误"), tr("无法找到脚本数据"))
 
-            elif script_type == 'file':
-                dialog = ModifyPathDialog(list_widget, 'file', current_path)
-                if dialog.exec_():
-                    new_path = dialog.get_new_path()
-                    if new_path:
-                        success, old_path = update_script_path(script_list, script_name, new_path, display_area)
-                        if success:
-                            script_data['value'] = new_path
-                            selected_item.setData(Qt.UserRole, script_data)
-                            selected_item.setIcon(QIcon(DEFAULT_ICON_PATH))
-                            get_file_icon(new_path, lambda icon: selected_item.setIcon(icon))
-                            appendLogWithEffect(display_area,
-                                                f"脚本 '{script_name}' 路径已修改: {old_path} -> {new_path}\n")
-                            QMessageBox.information(None, tr("成功"), tr("路径已更新"))
-                        else:
-                            appendLogWithEffect(display_area, f"更新脚本 '{script_name}' 路径失败\n")
+        modify_name_action.triggered.connect(handle_rename)
+        modify_path_action.triggered.connect(lambda: show_modify_path_dialog(list_widget, item, display_area))
+        reload_icon_action.triggered.connect(lambda: reload_icon_from_context(item, display_area))
 
-            elif script_type == 'merge':
-                dialog = ModifyPathDialog(list_widget, 'merge', current_path)
-                if dialog.exec_():
-                    new_scripts = dialog.get_new_path()
-                    if new_scripts:
-                        success, old_path = update_script_path(script_list, script_name, new_scripts, display_area)
-                        if success:
-                            script_data['value'] = new_scripts
-                            selected_item.setData(Qt.UserRole, script_data)
-                            selected_item.setIcon(QIcon(DEFAULT_ICON_PATH))
-                            appendLogWithEffect(display_area,
-                                                f"合并脚本 '{script_name}' 已修改: {old_path} -> {new_scripts}\n")
-                            QMessageBox.information(None, tr("成功"), tr("合并脚本已更新"))
-                        else:
-                            appendLogWithEffect(display_area, f"更新合并脚本 '{script_name}' 失败\n")
-
-        elif action == reload_icon_action:
-            script_data = selected_item.data(Qt.UserRole)
-            if not script_data:
-                appendLogWithEffect(display_area, "错误：无法获取脚本数据\n")
-                return
-
-            script_name = script_data.get('name', '未知脚本')
-            script_type = script_data.get('type')
-
-            if script_type != 'url':
-                appendLogWithEffect(display_area, f"脚本 '{script_name}' 不是网页脚本，无需重新加载图标\n")
-                return
-
-            current_url = script_data.get('value', '')
-            if not current_url:
-                appendLogWithEffect(display_area, f"脚本 '{script_name}' 网址为空，无法重新加载图标\n")
-                return
-
-            # 判断并修改网址末尾的 / 符号
-            new_url = current_url.rstrip('/') if current_url.endswith('/') else current_url + '/'
-
-            # 更新脚本列表中的网址
-            success, old_url = update_script_path(script_list, script_name, new_url, display_area)
-            if success:
-                script_data['value'] = new_url
-                selected_item.setData(Qt.UserRole, script_data)
-                # 重置图标为默认图标
-                selected_item.setIcon(QIcon(DEFAULT_ICON_PATH))
-                # 重新加载图标
-                get_website_favicon(new_url, lambda icon: selected_item.setIcon(icon))
-                appendLogWithEffect(display_area,
-                                    f"脚本 '{script_name}' 图标重新加载，网址已更新: {old_url} -> {new_url}\n")
-                QMessageBox.information(None, tr("成功"), tr("图标重新加载完成"))
-            else:
-                appendLogWithEffect(display_area, f"脚本 '{script_name}' 图标重新加载失败\n")
+        menu.exec_(list_widget.mapToGlobal(pos))
 
     list_widget.customContextMenuRequested.connect(context_menu_requested)
+
+
+# 假设 scripts_path 是您的 JSON 文件路径
+def save_scripts_to_file(list_widget):
+    """
+    将 QListWidget 中所有项目的脚本数据保存到 scripts.json 文件。
+    """
+    scripts = []
+    for i in range(list_widget.count()):
+        item = list_widget.item(i)
+        script_data = item.data(Qt.UserRole)
+        if script_data:
+            scripts.append(script_data)
+
+    try:
+        with open(scripts_path, 'w', encoding='utf-8') as f:
+            json.dump(scripts, f, ensure_ascii=False, indent=4)
+        print(f"脚本数据已成功保存到: {scripts_path}")
+    except Exception as e:
+        print(f"保存脚本数据失败: {e}")
+
+def execute_script_from_context(item, display_area):
+    """从右键菜单执行脚本"""
+    script_data = item.data(Qt.UserRole)
+    if script_data:
+        execute_script(item, display_area)
+    else:
+        appendLogWithEffect(display_area, "错误：无法获取脚本数据。\n")
+
+
+def reload_icon_from_context(item, display_area):
+    """
+    根据脚本类型重新加载图标。
+    """
+    script_data = item.data(Qt.UserRole)
+    if not script_data:
+        appendLogWithEffect(display_area, "错误：无法获取脚本数据。\n")
+        return
+
+    script_name = script_data.get('name')
+    script_type = script_data.get('type')
+    script_value = script_data.get('value')
+
+    if not script_name or not script_value:
+        appendLogWithEffect(display_area, f"无法重新加载图标：脚本 '{script_name}' 数据无效。\n")
+        return
+
+    # 重置为默认图标，防止加载旧图标
+    item.setIcon(QIcon(DEFAULT_ICON_PATH))
+    appendLogWithEffect(display_area, f"正在重新加载 '{script_name}' 的图标...\n")
+
+    # URL脚本：从网络重新获取图标
+    if script_type == 'url':
+        # 删除旧的缓存文件
+        safe_script_name = re.sub(r'[^\w\.-]', '_', script_name)
+        icon_path = os.path.join(get_resource_path('icon_cache'), f'{safe_script_name}.ico')
+        if os.path.exists(icon_path):
+            os.remove(icon_path)
+
+        # 重新获取图标
+        def set_icon(icon):
+            item.setIcon(icon)
+            appendLogWithEffect(display_area, f"URL 脚本 '{script_name}' 图标已更新。\n")
+
+        # 注意：此处假设 get_website_favicon 接受 callback 参数
+        get_website_favicon(script_value, script_name, callback=set_icon)
+
+    # 本地软件脚本：从文件重新提取图标
+    else:
+        if os.path.exists(script_value):
+            try:
+                # 使用 QFileIconProvider 从文件中提取图标
+                icon = QFileIconProvider().icon(QFileInfo(script_value))
+                if not icon.isNull():
+                    item.setIcon(icon)
+                    appendLogWithEffect(display_area, f"本地软件脚本 '{script_name}' 图标已从文件加载。\n")
+                else:
+                    appendLogWithEffect(display_area, f"无法从本地文件 '{script_value}' 重新加载图标，使用默认图标。\n")
+            except Exception as e:
+                appendLogWithEffect(display_area, f"从本地文件 '{script_value}' 加载图标失败: {e}\n")
+        else:
+            appendLogWithEffect(display_area, f"无法重新加载图标：本地脚本 '{script_name}' 的路径无效或文件不存在。\n")
+
+
+def show_rename_dialog(list_widget, item):
+    """显示重命名对话框，并返回新的名称。"""
+    old_name = item.text()
+    dialog = RenameScriptDialog(list_widget, old_name)
+    if dialog.exec_():
+        new_name = dialog.get_new_name()
+        if new_name and new_name != old_name:
+            # 检查新名称是否已存在
+            for i in range(list_widget.count()):
+                other_item = list_widget.item(i)
+                if other_item != item and other_item.text() == new_name:
+                    QMessageBox.warning(None, tr("错误"), tr("新名称已存在，请选择其他名称"))
+                    return None
+            return new_name
+    return None
+
+
+def show_modify_path_dialog(list_widget, item, display_area):
+    """显示修改路径对话框"""
+    script_data = item.data(Qt.UserRole)
+    if not script_data:
+        appendLogWithEffect(display_area, "错误：无法获取脚本数据。\n")
+        return
+
+    script_name = script_data.get('name')
+    script_type = script_data.get('type')
+    current_path = script_data.get('value', '')
+
+    if script_type == 'url':
+        dialog = ModifyPathDialog(list_widget, 'url', current_path)
+        if dialog.exec_():
+            new_url = dialog.get_new_path()
+            if new_url and new_url != current_path:
+                script_data['value'] = new_url
+                item.setData(Qt.UserRole, script_data)
+                # 重新加载图标
+                reload_icon_from_context(item, display_area)
+                # save_current_scripts() # 保存到文件
+                appendLogWithEffect(display_area, f"脚本 '{script_name}' 网址已修改: {current_path} -> {new_url}\n")
+                QMessageBox.information(None, tr("成功"), tr("网址已更新"))
+
+    elif script_type == 'file':
+        dialog = ModifyPathDialog(list_widget, 'file', current_path)
+        if dialog.exec_():
+            new_path = dialog.get_new_path()
+            if new_path and new_path != current_path:
+                script_data['value'] = new_path
+                item.setData(Qt.UserRole, script_data)
+                # 重新加载图标
+                reload_icon_from_context(item, display_area)
+                # save_current_scripts() # 保存到文件
+                appendLogWithEffect(display_area, f"脚本 '{script_name}' 路径已修改: {current_path} -> {new_path}\n")
+                QMessageBox.information(None, tr("成功"), tr("路径已更新"))
 
 
 def create_merge_script(self):
@@ -3949,7 +4138,8 @@ class CreateScriptDialog(QDialog):
                 border: 1px solid #BBBBBB;
                 border-radius: 8px;
                 color: #222222;
-                font-size: 14px;
+                font-size: 18px;
+                font-family: 'Comic Sans MS', 'KaiTi', sans-serif;
                 font-weight: bold;
                 padding: 2px 8px;
                 text-align: center;
@@ -4075,7 +4265,7 @@ class CreateScriptDialog(QDialog):
 
 
 
-
+# 夜间模式相关代码
 class StyledScrollingDelegate(QStyledItemDelegate):
     def __init__(self, parent=None):
         super().__init__(parent)
