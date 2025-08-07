@@ -4,31 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="8b0d000c-da3e-47a1-a976-bb7ef3da54fa" name="更改" comment="">
+    <list default="true" id="8b0d000c-da3e-47a1-a976-bb7ef3da54fa" name="更改" comment="修复icon混乱问题">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/resources/icon_cache/008ec4453ff31513f43893cba7aa31c8.ico" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/resources/icon_cache/00ce31733e677f459607cb39f7532d09.ico" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/resources/icon_cache/092edcbc8c971be041c2fe846bacc016.ico" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/resources/icon_cache/1439185a32d1ccc07253574ab00d6dbd.ico" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/resources/icon_cache/16fa15d096f32a70b470bac1aadad02c.ico" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/resources/icon_cache/23afb3a131ff24db692986a04cf39808.ico" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/resources/icon_cache/2a0b028fc94472269a3289a71558f6b6.ico" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/resources/icon_cache/3a123b132f5529b1ec4a7be02394916d.ico" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/resources/icon_cache/456bf5e40061d7e549f42754914a6141.ico" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/resources/icon_cache/52da5c5bdf6f342b4a3529f1564159d1.ico" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/resources/icon_cache/62ba7661fe152cf1aff1d9899ee01de1.ico" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/resources/icon_cache/763e8b085a668167797cd0fb051e1279.ico" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/resources/icon_cache/7aebb198fd8d429e02e4fa866c14afb0.ico" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/resources/icon_cache/a2b7c1160d7f6eda8be66e2e3e5a9f82.ico" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/resources/icon_cache/a5069d05033be7059cbd9afda9a1bbd5.ico" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/resources/icon_cache/c514755e7e8f630388f684eb7c33178f.ico" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/resources/icon_cache/d5f4c2a33eb3451de397bb62365540fb.ico" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/resources/icon_cache/d75277cdffef995a46ae59bdaef1db86.ico" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/resources/icon_cache/dba51bcc527ba93f7fe03868747280d5.ico" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/resources/icon_cache/e0ed1515e1e7fde535fbd6a8f2e09cfb.ico" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/resources/icon_cache/e27e5ab679519e883b982efc5540afb0.ico" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/resources/icon_cache/e9a3780a079279ad69252d16d1158566.ico" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/window.py" beforeDir="false" afterPath="$PROJECT_DIR$/window.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/function.py" beforeDir="false" afterPath="$PROJECT_DIR$/function.py" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -91,6 +69,14 @@
       <option name="presentableId" value="Default" />
       <updated>1754244276040</updated>
     </task>
+    <task id="LOCAL-00001" summary="修复icon混乱问题">
+      <created>1754597390720</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1754597390720</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -115,5 +101,9 @@
         </entry>
       </map>
     </option>
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="修复icon混乱问题" />
+    <option name="LAST_COMMIT_MESSAGE" value="修复icon混乱问题" />
   </component>
 </project>

@@ -512,6 +512,8 @@ def generateDivider(text_edit):
     divider = "〰" * max(1, width-1)  # 确保最少 1 个
     return divider
 
+
+# 日志显示文本函数
 def resizeEvent(self, event):
     """
     监听窗口大小变化，自动更新日志分割线
