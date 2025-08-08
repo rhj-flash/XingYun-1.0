@@ -75,14 +75,28 @@
         "value": "D:/雷神/LeiGod_Acc/leigod.exe"
     },
     {
+<<<<<<< HEAD
+=======
+        "name": "Wikipedia（维基百科）",
+        "type": "url",
+        "value": "https://zh.wikipedia.org/"
+    },
+    {
+>>>>>>> 5f49b523be0f4f1d41a349d260f125de54ffe7ee
         "name": "微信",
         "type": "file",
         "value": "D:/wechat/WeChat.exe"
     },
     {
+<<<<<<< HEAD
         "name": "Wikipedia（维基百科）",
         "type": "url",
         "value": "https://zh.wikipedia.org/"
+=======
+        "name": "CSDN",
+        "type": "url",
+        "value": "https://blog.csdn.net/RHJflash?spm=1000.2115.3001.5343/"
+>>>>>>> 5f49b523be0f4f1d41a349d260f125de54ffe7ee
     },
     {
         "name": "电影",

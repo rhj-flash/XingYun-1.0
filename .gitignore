@@ -1,0 +1,6 @@
+# 忽略 Python 编译文件
+__pycache__/
+*.pyc
+
+# 忽略 PyCharm IDE 文件
+.idea/
