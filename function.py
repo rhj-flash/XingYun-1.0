@@ -28,6 +28,8 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import QThread, pyqtSignal, Qt
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+
+from notification_manager import show_custom_notification
 from utils import get_resource_path, CACHE_LOCK, ICON_CACHE, ICON_EXECUTOR  # 从新文件导入
 
 
@@ -71,7 +73,7 @@ else:
 if os.path.exists(dictionary_path):
     with open(dictionary_path, 'r', encoding='utf-8') as file:
         content = file.read()
-        print(content)
+        print("单词文本已加载。")
 else:
     print("文件不存在，无法读取内容。")
     print(f"尝试从以下路径读取文件: {dictionary_path}")
@@ -494,6 +496,7 @@ def save_scripts(scripts):
         with open(scripts_path, 'w', encoding='utf-8') as file:
             json.dump(scripts, file, ensure_ascii=False, indent=4)
         print(f"脚本已保存到: {scripts_path}")
+        show_custom_notification("脚本已保存", 0)
     except Exception as e:
         print(f"保存脚本失败: {e}")
 
@@ -512,8 +515,6 @@ def generateDivider(text_edit):
     divider = "〰" * max(1, width-1)  # 确保最少 1 个
     return divider
 
-
-# 日志显示文本函数
 def resizeEvent(self, event):
     """
     监听窗口大小变化，自动更新日志分割线

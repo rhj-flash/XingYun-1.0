@@ -17,9 +17,9 @@ from PyQt5.QtWidgets import (
 )
 from bs4 import BeautifulSoup
 from selenium import webdriver
-
+from notification import WelcomeNotification
 from function import *
-
+from notification_manager import show_custom_notification
 #    EXE打包指令
 """
 =======================
@@ -713,8 +713,12 @@ def get_website_favicon(url, script_name, callback=None):
             with open(cache_file, 'wb') as f:
                 f.write(icon_data)
             print(f"Cached icon: {cache_file}")
+            appendLogWithEffect(display_area, f"Cached icon: {cache_file}")
+            status_bar.setText(f"❗ ❗ ❗ 脚本配置文件保存于本设备的: {cache_file}")
         except Exception as e:
             print(f"Cache save failed: {e}")
+
+
 
     def normalize_url(url):
         """规范化URL，添加协议等"""
@@ -1297,6 +1301,7 @@ def set_inverted_rounded_corners(widget, radius=5.0, antialiasing_level=2, smoot
           f"调整后半径={adjusted_radius}, 抗锯齿级别={ antialiasing_level}, "
           f"平滑度={smoothness}, 超采样={adjusted_supersampling}")
 
+
 def create_main_window():
     global status_bar, list_widget, search_edit, completer_model, display_area
     global create_script_button, remove_selected_button, clear_button, update_log_button
@@ -1334,6 +1339,7 @@ def create_main_window():
     center_window(main_window)
     main_layout = QVBoxLayout()
     main_window.setLayout(main_layout)
+
 
     # 设置倒圆角
     set_inverted_rounded_corners(main_window, radius=20, smoothness=2.0, debug_border=True)  # 启用调试边框
@@ -1461,9 +1467,21 @@ def create_main_window():
         main_window.move(main_window.pos() + delta)
         main_window.old_pos = event.globalPos()
 
+    def showEvent(event):
+        """在主窗口完全显示后，启动欢迎通知的动画。"""
+        # 确保通知对象存在，并且动画只触发一次
+        if hasattr(main_window, 'welcome_notification'):
+            print("主窗口已显示，启动通知动画。")  # 调试语句
+            main_window.welcome_notification.show_animation()
+            # 删除属性以确保动画不再重复启动
+            del main_window.welcome_notification
+         # 调用原始的 QWidget showEvent
+        QWidget.showEvent(main_window, event)
+
     main_window.mousePressEvent = mousePressEvent
     main_window.mouseReleaseEvent = mouseReleaseEvent
     main_window.mouseMoveEvent = mouseMoveEvent
+    main_window.showEvent = showEvent
 
     # 设置图标
     icon_path = get_resource_path('imge.png')
@@ -1577,6 +1595,19 @@ def create_main_window():
     night_mode_button.clicked.connect(toggle_night_mode)
     night_mode_button.setStyleSheet(night_mode_button_style)
     night_mode_button.setFixedSize(32, 32)
+
+    def check_and_apply_night_mode():
+        """
+        根据当前时间，自动切换到夜间模式。
+        假设夜间时段为晚上 18:00 到次日早上 06:00。
+        """
+        current_hour = datetime.now().hour
+        # 使用 QTimer.singleShot 延迟执行，确保 UI 完全加载
+        if 18 <= current_hour or current_hour < 6:
+            # 如果当前是晚上，模拟点击夜间模式按钮
+            print("当前时间为夜间，自动启用夜间模式。")  # 调试语句
+            QTimer.singleShot(100, night_mode_button.click)
+    check_and_apply_night_mode()
 
     # 网速测试按钮
     network_speed_button = QPushButton("  📡  ")
@@ -1818,6 +1849,7 @@ def create_main_window():
             from datetime import datetime
             display_area.clear()
             display_area.append(f"📡🔴网络测试开始 ")
+            show_custom_notification("📡🔴网络测试开始", 1)
             display_area.append(
                 f"   连接到: {current_network} {'✅ 已连接' if connection_state.lower() == 'connected' else '❌ 未连接'}")
             display_area.append(f"   密码🔒: {password}")
@@ -1940,7 +1972,8 @@ def create_main_window():
                     if isinstance(widget, (QPushButton, QLineEdit, QTextEdit, QListWidget)):
                         widget.setEnabled(True)
                 clear_display(display_area)
-                appendLogWithEffect(display_area, "🟢 网络测试已停止\n")
+                appendLogWithEffect(display_area, "🔵 网络测试已停止\n")
+                show_custom_notification("🔵 网络测试已停止")
                 if speed_test_timer is not None:
                     speed_test_timer.stop()
 
@@ -2145,6 +2178,7 @@ def toggle_english_mode():
 ╚══════╝╚═╝  ╚═══╝ ╚═════╝ ╚══════╝╚═╝╚══════╝╚═╝  ╚═╝
 """)
         status_bar.setText("🔴 英语查询模式")
+        show_custom_notification("🔴 英语查询模式开启",1)
     else:
         english_mode = False
         english_learn_button.setStyleSheet(original_english_btn_style)
@@ -2173,7 +2207,7 @@ def toggle_english_mode():
 ╚══════╝╚═╝  ╚═╝╚═╝   ╚═╝    
 """)
         status_bar.setText(">>> 准备就绪🚀")
-
+        show_custom_notification("🔵已退出单词查询模式")
 
 def toggle_night_mode():
     global night_mode, main_window, english_learn_button, night_mode_button, status_bar, title_bar, title_bar
@@ -2438,6 +2472,7 @@ def save_list_order():
         scripts.append(script_data)
     save_scripts(scripts)
     appendLogWithEffect(display_area, "🔄脚本顺序已更新！\n")
+    show_custom_notification("🔄脚本顺序已更新", 0)
 
 
 def create_button(text, parent, callback):
@@ -2532,8 +2567,8 @@ def remove_script(list_widget, display_area, completer_model):
                 completer_model.setStringList(completer_items)
                 save_current_scripts()
                 update_item_colors()
-                appendLogWithEffect(display_area,
-                                    f"脚本 '{script_name}' 已删除！\n")
+                appendLogWithEffect(display_area,f"脚本 '{script_name}' 已删除！\n")
+                show_custom_notification("脚本已删除", 0)
         else:
             custom_message_box_style = """
                 QMessageBox {
@@ -2656,13 +2691,13 @@ def display_welcome_screen(display_area):
 欢迎使用本软件！
     使用说明：
     1. 创建软件脚本：创建一个打开软件的脚本,需要用户自定义脚本名称以及选择打开软件的绝对路径,双击使用.
-    2. 创建网页脚本：创建一个打开网页的脚本,需要用户键入网址和脚本名称(右键脚本可修改名称/地址).
-    3. 拖拽脚本可以调整排序位置,鼠标放置于脚本上方可查看当前脚本的网址/绝对路径.
+    2. 创建网页脚本：创建一个打开网页的脚本,需要用户键入网址和脚本名称(右键脚本可修改名称).
+    3. 拖拽脚本可以调整排序位置.
     4. 设备信息：获取当前设备基础信息(部分功能需要开启管理员权限).
-    5. 网页脚本：🌐 Google | 🔗https://www.google.com
-       软件脚本：🖥️ Photoshop | 📂C:/Program Files/Adobe/Photoshop.exe
-    6. 🔴 英语查询模式下其它功能禁用 
-    7.Github开源地址：|  https://github.com/rhj-flash/XingYun-1.0
+    5. 网页脚本：🌐 Google | 🔗https://www.google.com.
+       软件脚本：🖥️ Photoshop | 📂C:/Program Files/Adobe/Photoshop.exe.
+    6. 🔴 英语查询模式下其它功能禁用 .
+    7.Github开源地址：|  https://github.com/rhj-flash/XingYun-1.0.
 使用愉快！
                                                                             Rhj_flash
 —————————————————————————————————————————————————————————————————————————————————————————
@@ -3462,7 +3497,7 @@ def setup_context_menu(list_widget, display_area, completer_model):
 
         execute_action = menu.addAction(tr("执行脚本"))
         modify_name_action = menu.addAction(tr("重命名"))
-        modify_path_action = menu.addAction(tr("修改路径"))
+        # modify_path_action = menu.addAction(tr("修改路径"))
         reload_icon_action = menu.addAction(tr("重新加载图标"))
 
         # 将菜单项连接到各自的逻辑函数
@@ -3489,12 +3524,13 @@ def setup_context_menu(list_widget, display_area, completer_model):
                     save_scripts_to_file(list_widget)
 
                     appendLogWithEffect(display_area, f"脚本 '{old_name}' 已重命名为 '{new_name}'\n")
+                    show_custom_notification("脚本重命名成功", 0)
                     QMessageBox.information(None, tr("成功"), tr("脚本名称已更新"))
                 else:
                     QMessageBox.warning(None, tr("错误"), tr("无法找到脚本数据"))
 
         modify_name_action.triggered.connect(handle_rename)
-        modify_path_action.triggered.connect(lambda: show_modify_path_dialog(list_widget, item, display_area))
+        # modify_path_action.triggered.connect(lambda: show_modify_path_dialog(list_widget, item, display_area))
         reload_icon_action.triggered.connect(lambda: reload_icon_from_context(item, display_area))
 
         menu.exec_(list_widget.mapToGlobal(pos))
@@ -5169,11 +5205,24 @@ def show_create_script_dialog(parent, list_widget, display_area, completer_model
     dialog.exec_()
 
 
+def delayed_show_notification(parent_window):
+        """
+        延迟创建并显示欢迎通知，确保主窗口已完全加载。
+        """
+        # 创建通知窗口实例
+        parent_window.welcome_notification = WelcomeNotification(
+            parent=parent_window,
+        )
+        # 启动动画
+        parent_window.welcome_notification.show_animation()
+
 if __name__ == '__main__':
+
     app = QApplication(sys.argv)
     translator = QTranslator()
     current_language = 'zh'
     app.installTranslator(translator)
     main_window = create_main_window()
     main_window.show()
+    delayed_show_notification(main_window)
     sys.exit(app.exec_())

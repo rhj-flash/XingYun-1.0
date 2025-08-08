@@ -1,11 +1,6 @@
 [
     {
-        "name": "v2rayN",
-        "type": "file",
-        "value": "D:/VPN/v2rayN-Core/v2rayN.exe"
-    },
-    {
-        "name": "Runoob.com",
+        "name": "Runoob1",
         "type": "url",
         "value": "https://www.runoob.com/"
     },
@@ -25,14 +20,14 @@
         "value": "https://chatgpt.com/"
     },
     {
-        "name": "Grok",
-        "type": "url",
-        "value": "https://grok.com/chat/"
-    },
-    {
         "name": "Le Chat - Mistral AI  (VPN节点开伦敦)",
         "type": "url",
         "value": "https://chat.mistral.ai/chat"
+    },
+    {
+        "name": "Grok",
+        "type": "url",
+        "value": "https://grok.com/chat/"
     },
     {
         "name": "deep_seek",
@@ -40,14 +35,14 @@
         "value": "https://chat.deepseek.com/"
     },
     {
-        "name": "单词学习",
-        "type": "url",
-        "value": "https://qwerty.kaiyi.cool"
-    },
-    {
         "name": "GitHub",
         "type": "url",
         "value": "https://github.com/"
+    },
+    {
+        "name": "单词学习",
+        "type": "url",
+        "value": "https://qwerty.kaiyi.cool"
     },
     {
         "name": "YouTube",
@@ -75,19 +70,14 @@
         "value": "D:/雷神/LeiGod_Acc/leigod.exe"
     },
     {
-        "name": "Wikipedia（维基百科）",
-        "type": "url",
-        "value": "https://zh.wikipedia.org/"
-    },
-    {
         "name": "微信",
         "type": "file",
         "value": "D:/wechat/WeChat.exe"
     },
     {
-        "name": "CSDN",
+        "name": "Wikipedia（维基百科）",
         "type": "url",
-        "value": "https://blog.csdn.net/RHJflash?spm=1000.2115.3001.5343/"
+        "value": "https://zh.wikipedia.org/"
     },
     {
         "name": "电影",
@@ -120,13 +110,13 @@
         "value": "https://www.bearaudiotool.com/zh/tools-list/"
     },
     {
-        "name": "软件网站",
-        "type": "url",
-        "value": "https://www.rjsos.com/win"
-    },
-    {
         "name": "GIF制作（拖入视频后直接导出GIF  10帧）",
         "type": "url",
         "value": "https://www.photopea.com/"
+    },
+    {
+        "name": "1",
+        "type": "url",
+        "value": "https://2"
     }
 ]
