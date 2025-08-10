@@ -17,9 +17,9 @@ from PyQt5.QtWidgets import (
 )
 from bs4 import BeautifulSoup
 from selenium import webdriver
-from notification import WelcomeNotification
 from function import *
-from notification_manager import show_custom_notification
+from notification_manager import show_custom_notification, show_greeting_notification
+
 #    EXE打包指令
 """
 =======================
@@ -95,7 +95,6 @@ scrollbar_style_night = """
         background: transparent !important;  /* 确保滑轨透明 */
     }
 """
-
 
 # 日间模式样式
 display_area_style = """
@@ -236,8 +235,6 @@ completer_popup_style = """
         min-height: 250px;
     }
 """
-
-
 
 left_widget_style = """
     QWidget {
@@ -431,7 +428,6 @@ QPushButton:hover {
 }
 """
 
-
 search_edit_style_night = """
     QLineEdit {
         background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
@@ -564,49 +560,6 @@ def ensure_word_file():
     return None  # 无法获取单词表
 
 
-def get_resource_path(relative_path):
-    """获取资源文件路径（开发/打包环境兼容）
-    同时支持单词表、主图标和缓存图标
-    """
-    is_frozen = getattr(sys, 'frozen', False)
-
-    # 处理图标缓存路径
-    if relative_path.startswith("icon_cache/"):
-        if is_frozen:
-            # 打包环境 - 使用用户目录
-            base_dir = os.path.join(os.path.expanduser("~"), "Xingyun")
-        else:
-            # 开发环境 - 使用项目目录
-            base_dir = os.path.dirname(os.path.abspath(__file__))
-
-        cache_dir = os.path.join(base_dir, "icon_cache")
-        os.makedirs(cache_dir, exist_ok=True)
-        return os.path.join(cache_dir, relative_path[11:])
-
-    # 处理其他资源路径
-    if is_frozen:
-        # 打包环境优先使用临时解压目录
-        base_path = getattr(sys, '_MEIPASS', os.path.dirname(sys.executable))
-    else:
-        # 开发环境使用项目目录
-        base_path = os.path.dirname(os.path.abspath(__file__))
-
-    # 标准化资源路径
-    if relative_path.startswith("resources/"):
-        relative_path = relative_path[9:]
-
-    full_path = os.path.join(base_path, "resources", relative_path)
-
-    # 后备检查：如果文件不存在，尝试用户目录
-    if not os.path.exists(full_path) and is_frozen:
-        user_dir = os.path.join(os.path.expanduser("~"), "Xingyun")
-        user_path = os.path.join(user_dir, "resources", relative_path)
-        if os.path.exists(user_path):
-            return user_path
-
-    return full_path
-
-
 # 用于线程安全的锁
 CACHE_LOCK = threading.Lock()
 # 图标缓存
@@ -614,7 +567,7 @@ ICON_CACHE = {}
 # 线程池
 ICON_EXECUTOR = ThreadPoolExecutor(max_workers=50)
 # 默认图标路径
-DEFAULT_ICON_PATH = get_resource_path("imge.png")
+DEFAULT_ICON_PATH = get_resource_path("resources/imge.png")
 # 夜间模式标志
 
 night_mode = False  # Add this line
@@ -640,7 +593,7 @@ def get_dynamic_favicon(url):
 
 
 def validate_cache():
-    cache_dir = get_resource_path("icon_cache")
+    cache_dir = get_resource_path("resources/icon_cache")
     for file in os.listdir(cache_dir):
         path = os.path.join(cache_dir, file)
         try:
@@ -714,11 +667,10 @@ def get_website_favicon(url, script_name, callback=None):
                 f.write(icon_data)
             print(f"Cached icon: {cache_file}")
             appendLogWithEffect(display_area, f"Cached icon: {cache_file}")
-            status_bar.setText(f"❗ ❗ ❗ 脚本配置文件保存于本设备的: {cache_file}")
+            status_bar.setText(f"Cached icon: {cache_file}")
+        # show_custom_notification(f"Cached icon: {cache_file}")
         except Exception as e:
             print(f"Cache save failed: {e}")
-
-
 
     def normalize_url(url):
         """规范化URL，添加协议等"""
@@ -819,7 +771,6 @@ def get_website_favicon(url, script_name, callback=None):
                     ICON_CACHE[url] = icon
                 return icon
         return get_default_icon()
-
 
     # ---------- 异步处理保持不变 ----------
     if callback:
@@ -1187,6 +1138,7 @@ def update_status_bar(widget_name):
     else:
         status_bar.setText(">>> 准备就绪 🚀")
 
+
 def handle_hover_search_edit(obj, event):
     if english_mode:  # 如果处于英语模式，禁止悬浮动画
         return False
@@ -1206,7 +1158,8 @@ def handle_hover_search_edit(obj, event):
 from PyQt5.QtGui import QPainterPath
 
 
-def set_inverted_rounded_corners(widget, radius=5.0, antialiasing_level=2, smoothness=2.0, supersampling=4.0, debug_border=False):
+def set_inverted_rounded_corners(widget, radius=5.0, antialiasing_level=2, smoothness=2.0, supersampling=4.0,
+                                 debug_border=False):
     """
     为窗口设置极平滑的倒圆角效果，使用超采样和边缘渐变消除毛刺。
 
@@ -1298,7 +1251,7 @@ def set_inverted_rounded_corners(widget, radius=5.0, antialiasing_level=2, smoot
 
     # 调试输出
     print(f"倒圆角渲染完成: 尺寸={width}x{height}, 半径={radius}, "
-          f"调整后半径={adjusted_radius}, 抗锯齿级别={ antialiasing_level}, "
+          f"调整后半径={adjusted_radius}, 抗锯齿级别={antialiasing_level}, "
           f"平滑度={smoothness}, 超采样={adjusted_supersampling}")
 
 
@@ -1312,6 +1265,8 @@ def create_main_window():
     main_window = QWidget()
     main_window.setGeometry(100, 100, 1024, 768)
     main_window.setWindowTitle(tr('Xing_yun V1.0(@Rhj_flash)'))
+
+    show_greeting_notification()
 
     # --------------------------------------------------------------------------------
     # 修复任务栏无法还原无边框窗口的问题
@@ -1339,7 +1294,6 @@ def create_main_window():
     center_window(main_window)
     main_layout = QVBoxLayout()
     main_window.setLayout(main_layout)
-
 
     # 设置倒圆角
     set_inverted_rounded_corners(main_window, radius=20, smoothness=2.0, debug_border=True)  # 启用调试边框
@@ -1400,7 +1354,6 @@ def create_main_window():
     title_bar_layout.addWidget(github_button)  # 将按钮添加到布局中
     # ****************** 新增代码结束 ******************
 
-
     # 最小化按钮
     min_button = QPushButton("—")  # 使用标准 Unicode 最小化图标
     min_button.setFixedSize(35, 35)
@@ -1432,6 +1385,7 @@ def create_main_window():
         else:
             main_window.showMaximized()
             max_button.setText("🗗")  # 还原图标
+
     max_button.clicked.connect(toggle_maximize)
     title_bar_layout.addWidget(max_button)
 
@@ -1475,7 +1429,7 @@ def create_main_window():
             main_window.welcome_notification.show_animation()
             # 删除属性以确保动画不再重复启动
             del main_window.welcome_notification
-         # 调用原始的 QWidget showEvent
+        # 调用原始的 QWidget showEvent
         QWidget.showEvent(main_window, event)
 
     main_window.mousePressEvent = mousePressEvent
@@ -1500,8 +1454,6 @@ def create_main_window():
         border-top: 1px solid #CCCCCC;
         border-radius: 8px;
     """)
-
-
 
     status_bar.setAlignment(Qt.AlignLeft)
     status_bar.setFixedHeight(30)
@@ -1607,6 +1559,7 @@ def create_main_window():
             # 如果当前是晚上，模拟点击夜间模式按钮
             print("当前时间为夜间，自动启用夜间模式。")  # 调试语句
             QTimer.singleShot(100, night_mode_button.click)
+
     check_and_apply_night_mode()
 
     # 网速测试按钮
@@ -1652,6 +1605,7 @@ def create_main_window():
     min_upload_speed = float('inf')
 
     def run_speed_test():
+        show_custom_notification("📡🔴网络测试开始")
         """实时获取 WiFi 和网络的详细信息，呈现生动、直观的网络状态"""
         global last_bytes_sent, last_bytes_recv, last_time
         global max_download_speed, min_download_speed, max_upload_speed, min_upload_speed
@@ -1849,12 +1803,12 @@ def create_main_window():
             from datetime import datetime
             display_area.clear()
             display_area.append(f"📡🔴网络测试开始 ")
-            show_custom_notification("📡🔴网络测试开始", 1)
             display_area.append(
                 f"   连接到: {current_network} {'✅ 已连接' if connection_state.lower() == 'connected' else '❌ 未连接'}")
             display_area.append(f"   密码🔒: {password}")
             display_area.append(f"   信号强度:  {signal_strength}% {signal_description}")
-            display_area.append("————————————————————————————————————————————————————————————————————————————————————————")
+            display_area.append(
+                "————————————————————————————————————————————————————————————————————————————————————————")
 
             display_area.append("⚡ 网速与性能")
             display_area.append(f"    下载速度: {actual_download:.2f} Mbps ↓")
@@ -1867,7 +1821,8 @@ def create_main_window():
             display_area.append(f"    最小上传速度: {min_upload_display:.2f} Mbps")
             display_area.append(f"    理论下载速率: {receive_rate:.1f} Mbps")
             display_area.append(f"    理论上传速率: {transmit_rate:.1f} Mbps")
-            display_area.append("————————————————————————————————————————————————————————————————————————————————————————")
+            display_area.append(
+                "————————————————————————————————————————————————————————————————————————————————————————")
 
             display_area.append("🔧 网络技术细节")
             display_area.append(f"    网络类型: {network_type}")
@@ -1878,7 +1833,8 @@ def create_main_window():
             display_area.append(f"    信道宽度: {channel_width}")
             display_area.append(f"    认证方式: {authentication}")
             display_area.append(f"    加密方式: {encryption}")
-            display_area.append("————————————————————————————————————————————————————————————————————————————————————————")
+            display_area.append(
+                "————————————————————————————————————————————————————————————————————————————————————————")
 
             display_area.append("🌍 连接信息")
             display_area.append(f"    MAC地址: {mac_address}")
@@ -1989,7 +1945,6 @@ def create_main_window():
     network_speed_button.clicked.connect(toggle_network_speed)
     network_speed_button.enterEvent = lambda event: update_status_bar("网速测试")
 
-
     # 状态栏容器
     status_container = QWidget()
     status_layout = QHBoxLayout(status_container)
@@ -2009,7 +1964,6 @@ def create_main_window():
     list_widget.itemClicked.connect(on_list_item_clicked)
     list_widget.itemDoubleClicked.connect(lambda item: execute_script(item, display_area))
     list_widget.setDragDropMode(QListWidget.InternalMove)
-    list_widget.model().rowsMoved.connect(update_item_colors)
     list_widget.setDefaultDropAction(Qt.MoveAction)
     list_widget.setSelectionMode(QListWidget.SingleSelection)
     list_widget.setAcceptDrops(True)
@@ -2051,7 +2005,7 @@ def create_main_window():
                                            lambda: remove_script(list_widget, display_area, completer_model))
     clear_button = create_button("🧹️ 清除屏幕", main_window, lambda: clear_display(display_area))
     update_log_button = create_button("📜 设备信息", main_window,
-                                      lambda: update_log_with_effect(display_area))
+                                      lambda: information_div(display_area))
 
     create_script_button.enterEvent = lambda event: update_status_bar("🌟 创建脚本")
     remove_selected_button.enterEvent = lambda event: update_status_bar("🗑️ 删除脚本")
@@ -2146,8 +2100,8 @@ def create_main_window():
     setup_context_menu(list_widget, display_area, completer_model)
     # 显示欢迎界面功能
     display_welcome_screen(display_area)
-    update_item_colors()
     return main_window
+
 
 def toggle_english_mode():
     global english_mode, english_learn_button, list_widget, create_script_button, remove_selected_button, clear_button, update_log_button, search_edit, display_area, original_english_btn_style
@@ -2178,7 +2132,7 @@ def toggle_english_mode():
 ╚══════╝╚═╝  ╚═══╝ ╚═════╝ ╚══════╝╚═╝╚══════╝╚═╝  ╚═╝
 """)
         status_bar.setText("🔴 英语查询模式")
-        show_custom_notification("🔴 英语查询模式开启",1)
+        show_custom_notification("🔴 英语查询模式开启")
     else:
         english_mode = False
         english_learn_button.setStyleSheet(original_english_btn_style)
@@ -2208,6 +2162,7 @@ def toggle_english_mode():
 """)
         status_bar.setText(">>> 准备就绪🚀")
         show_custom_notification("🔵已退出单词查询模式")
+
 
 def toggle_night_mode():
     global night_mode, main_window, english_learn_button, night_mode_button, status_bar, title_bar, title_bar
@@ -2309,7 +2264,8 @@ def toggle_night_mode():
             background-color: #000000;  /* 与夜间模式主窗口一致 */
             font-family: 'Sarasa Gothic', 'Consolas', 'Courier New', sans-serif;
         """)
-        title_bar.setStyleSheet("background-color: #000000; border-top-left-radius: 15px; border-top-right-radius: 15px;")
+        title_bar.setStyleSheet(
+            "background-color: #000000; border-top-left-radius: 15px; border-top-right-radius: 15px;")
     else:
         night_mode = False
         main_window.setStyleSheet("""
@@ -2328,7 +2284,8 @@ def toggle_night_mode():
                 background-color: #F0F2F5;  /* 分割器手柄背景 */
             }
         """)
-        title_bar.setStyleSheet("background-color: #F0F2F5; border-top-left-radius: 15px; border-top-right-radius: 15px;")
+        title_bar.setStyleSheet(
+            "background-color: #F0F2F5; border-top-left-radius: 15px; border-top-right-radius: 15px;")
         list_widget.setStyleSheet(list_widget_style)
         search_edit.setStyleSheet(search_edit_style)
         display_area.setStyleSheet(display_area_style)
@@ -2346,9 +2303,8 @@ def toggle_night_mode():
             border-top: 1px solid #CCCCCC;
             background-color: #F0F2F5;  /* 与日间模式主窗口一致 */
         """)
-        title_bar.setStyleSheet("background-color: #F0F2F5; border-top-left-radius: 15px; border-top-right-radius: 15px;")
-
-
+        title_bar.setStyleSheet(
+            "background-color: #F0F2F5; border-top-left-radius: 15px; border-top-right-radius: 15px;")
 
         # 恢复窗口标题栏颜色（仅适用于 Windows）
         if sys.platform == "win32":
@@ -2406,6 +2362,7 @@ def query_local_dictionary(word, top_n=5):
         return [{"word": eng, "translation": trans} for _, eng, trans in matches[:top_n]]
     return []
 
+
 def query_and_display_result(word, result_label):
     """ 查询单词并显示最接近的多个模糊匹配结果，适合实时预显示 """
     if not word.strip():  # 空输入不显示结果
@@ -2420,6 +2377,7 @@ def query_and_display_result(word, result_label):
         result_label.setText(display_text.strip())
     else:
         result_label.setText(f"⚠️ 无与 '{word}' 相关的预测结果")
+
 
 def english_search_text_changed(text):
     """
@@ -2453,16 +2411,6 @@ def original_search_handler(text):
     filter_list_widget(list_widget, text)
 
 
-def update_item_colors():
-    """ 重新按照索引更新单双数颜色 """
-    for i in range(list_widget.count()):
-        item = list_widget.item(i)
-        if i % 2 == 0:
-            item.setBackground(QColor("#F5F5F5"))  # 偶数行颜色（浅灰）
-        else:
-            item.setBackground(QColor("#E8E8E8"))  # 奇数行颜色（稍深灰）
-
-
 # 当用户拖拽调整顺序后，自动更新 `scripts.json`
 def save_list_order():
     scripts = []
@@ -2470,9 +2418,10 @@ def save_list_order():
         item = list_widget.item(i)
         script_data = item.data(Qt.UserRole)
         scripts.append(script_data)
-    save_scripts(scripts)
+
     appendLogWithEffect(display_area, "🔄脚本顺序已更新！\n")
-    show_custom_notification("🔄脚本顺序已更新", 0)
+    save_current_scripts()
+    show_custom_notification("🔄脚本顺序已更新")
 
 
 def create_button(text, parent, callback):
@@ -2488,6 +2437,9 @@ def on_list_item_clicked(item):
 
 
 def execute_script(item, display_area):
+    """
+    执行脚本并根据类型显示带图标的通知。
+    """
     current_item = list_widget.currentItem()
     if current_item != item:
         return
@@ -2495,11 +2447,17 @@ def execute_script(item, display_area):
         script_data = item.data(Qt.UserRole)
         script_type = script_data.get('type')
         script_value = script_data.get('value')
-        timestamp = datetime.now().strftime('%m-%d %H:%M:%S')
+
+        # 统一的通知函数，用于在获取到图标后显示
+        def show_notification_with_icon(message, icon_obj):
+            show_custom_notification(message, icon=icon_obj)
+
+        # 获取默认图标，用于缓存未命中时
+        default_icon = get_default_icon()
 
         if script_type == 'merge':
-            # 只输出一次开始执行的日志
             appendLogWithEffect(display_area, f"合并脚本 '{item.text()}' 执行完成\n")
+            show_custom_notification("合并脚本完成", icon=default_icon)
 
             # 静默执行所有子脚本
             for sub_script in script_value:
@@ -2511,12 +2469,41 @@ def execute_script(item, display_area):
                     open_file(sub_value)
 
         elif script_type == 'url':
+            # 1. 尝试同步从缓存获取图标
+            # get_website_favicon在没有callback时会同步执行，并返回缓存图标或默认图标
+            icon_to_show = get_website_favicon(script_value, item.text())
+
+            # 2. 立即打开网页
             open_url(script_value)
+
+            # 3. 立即显示通知，使用获取到的图标（可能是缓存图标，也可能是默认图标）
+            show_notification_with_icon(f"已打开网页: {item.text()}", icon_to_show)
             appendLogWithEffect(display_area, f"打开网页: {item.text()}\n")
 
+            # 4. 如果图标是默认图标（表示缓存未命中），则在后台异步下载
+            if icon_to_show is default_icon:
+                # 异步调用get_website_favicon，但不需要回调函数
+                # 这里使用 lambda 表达式传入一个空函数作为回调，确保异步执行，但不做任何事情
+                get_website_favicon(script_value, item.text(), callback=lambda f: None)
+
         elif script_type == 'file':
+            # 同步获取文件图标
+            file_icon = get_file_icon(script_value)
             open_file(script_value)
             appendLogWithEffect(display_area, f"打开软件: {item.text()}\n")
+
+            # 显示带文件图标的通知
+            show_notification_with_icon(f"已打开软件: {item.text()}", icon_obj=file_icon)
+
+        elif script_type == 'exe':
+            # 同步获取可执行文件图标
+            exe_icon = get_file_icon(script_value)
+            # 在这里添加 open_exe(script_value) 的调用
+            # open_exe(script_value)
+            appendLogWithEffect(display_area, f"执行程序: {item.text()}\n")
+
+            # 显示带程序图标的通知
+            show_notification_with_icon(f"已执行程序: {item.text()}", icon_obj=exe_icon)
 
         list_widget.setToolTip(str(script_value))
     except Exception as e:
@@ -2566,9 +2553,8 @@ def remove_script(list_widget, display_area, completer_model):
                 completer_items.remove(script_name)
                 completer_model.setStringList(completer_items)
                 save_current_scripts()
-                update_item_colors()
-                appendLogWithEffect(display_area,f"脚本 '{script_name}' 已删除！\n")
-                show_custom_notification("脚本已删除", 0)
+                appendLogWithEffect(display_area, f"脚本 '{script_name}' 已删除！\n")
+                show_custom_notification("脚本已删除")
         else:
             custom_message_box_style = """
                 QMessageBox {
@@ -2637,11 +2623,8 @@ def save_current_scripts():
     save_scripts(scripts)
 
 
-def update_log_with_effect(display_area):
+def information_div(display_area):
     try:
-        with open(get_resource_path('update_log.txt'), 'r', encoding='utf-8') as file:
-            content = file.read()
-
         # 获取电脑基本信息
         computer_info = get_computer_info()
 
@@ -2668,6 +2651,9 @@ def update_log_with_effect(display_area):
 
         # 使用 QMessageBox 显示错误信息
         QMessageBox.critical(None, tr('错误'), f"{tr('加载开发者日志时发生错误')}: {e}")
+
+
+from function import get_city_and_region
 
 
 def display_welcome_screen(display_area):
@@ -2703,6 +2689,10 @@ def display_welcome_screen(display_area):
 —————————————————————————————————————————————————————————————————————————————————————————
 加载完毕...
 """
+
+    location_info = get_city_and_region()
+
+    show_custom_notification(f"💖欢迎回来 {location_info} 的朋友")
 
     appendLogWithEffect(display_area, welcome_message, include_timestamp=False)
 
@@ -3190,12 +3180,21 @@ class RenameScriptDialog(QDialog):
         label = QLabel(tr("请输入新的脚本名称:"))
         label.setAlignment(Qt.AlignCenter)
         layout.addWidget(label)
+        label.setStyleSheet("""
+                        QLabel {
+                            background-color: transparent;
+                            color: #000000; /* 夜间模式文字颜色 */
+                            font-family: 'Comic Sans MS', 'KaiTi', sans-serif;
+                            font-size: 25px;
+                        }
+                    """)
 
         # 输入框
         self.name_edit = QLineEdit()
         self.name_edit.setText(self.old_name)
         self.name_edit.setPlaceholderText(tr("请输入新名称"))
-        self.name_edit.setMinimumWidth(100)
+        self.name_edit.setMinimumWidth(50)
+        self.name_edit.setMinimumHeight(40)
         layout.addWidget(self.name_edit)
 
         # 按钮区域
@@ -3204,10 +3203,14 @@ class RenameScriptDialog(QDialog):
         cancel_button = QPushButton(tr("✖ 取消"))
         ok_button.clicked.connect(self.accept)
         cancel_button.clicked.connect(self.reject)
-        button_layout.addStretch()
+
+        # 直接设置按钮的最小尺寸
+        ok_button.setMinimumSize(QSize(120, 40))
+        cancel_button.setMinimumSize(QSize(120, 40))
+
         button_layout.addWidget(ok_button)
         button_layout.addWidget(cancel_button)
-        button_layout.addStretch()
+
         layout.addLayout(button_layout)
 
         # 应用样式
@@ -3321,12 +3324,21 @@ class ModifyPathDialog(QDialog):
         label = QLabel(label_text)
         label.setAlignment(Qt.AlignCenter)
         layout.addWidget(label)
+        label.setStyleSheet("""
+                                QLabel {
+                                    font-family: 'Comic Sans MS', 'KaiTi', sans-serif;
+                                    background-color: transparent;
+                                    font-size: 25px;
+                                    color: #000000; /* 夜间模式文字颜色 */
+                                }
+                            """)
 
         # 输入框
         self.path_edit = QLineEdit()
         self.path_edit.setText(self.current_path)
         self.path_edit.setPlaceholderText(tr("选择文件路径") if self.script_type == 'file' else tr("输入网址"))
-        self.path_edit.setMinimumWidth(400)
+        self.path_edit.setMinimumWidth(50)
+        self.path_edit.setMinimumHeight(40)
         layout.addWidget(self.path_edit)
 
         # 文件选择按钮（仅文件类型）
@@ -3341,10 +3353,13 @@ class ModifyPathDialog(QDialog):
         cancel_button = QPushButton(tr("✖ 取消"))
         ok_button.clicked.connect(self.accept)
         cancel_button.clicked.connect(self.reject)
-        button_layout.addStretch()
+
+        # 直接设置按钮的最小尺寸
+        ok_button.setMinimumSize(QSize(120, 40))
+        cancel_button.setMinimumSize(QSize(120, 40))
+
         button_layout.addWidget(ok_button)
         button_layout.addWidget(cancel_button)
-        button_layout.addStretch()
         layout.addLayout(button_layout)
 
         # 应用样式
@@ -3497,7 +3512,7 @@ def setup_context_menu(list_widget, display_area, completer_model):
 
         execute_action = menu.addAction(tr("执行脚本"))
         modify_name_action = menu.addAction(tr("重命名"))
-        # modify_path_action = menu.addAction(tr("修改路径"))
+        modify_path_action = menu.addAction(tr("修改路径"))
         reload_icon_action = menu.addAction(tr("重新加载图标"))
 
         # 将菜单项连接到各自的逻辑函数
@@ -3522,15 +3537,14 @@ def setup_context_menu(list_widget, display_area, completer_model):
 
                     # **关键修复：保存修改后的脚本列表到文件**
                     save_scripts_to_file(list_widget)
-
                     appendLogWithEffect(display_area, f"脚本 '{old_name}' 已重命名为 '{new_name}'\n")
-                    show_custom_notification("脚本重命名成功", 0)
+                    show_custom_notification("脚本重命名成功")
                     QMessageBox.information(None, tr("成功"), tr("脚本名称已更新"))
                 else:
                     QMessageBox.warning(None, tr("错误"), tr("无法找到脚本数据"))
 
         modify_name_action.triggered.connect(handle_rename)
-        # modify_path_action.triggered.connect(lambda: show_modify_path_dialog(list_widget, item, display_area))
+        modify_path_action.triggered.connect(lambda: show_modify_path_dialog(list_widget, item, display_area))
         reload_icon_action.triggered.connect(lambda: reload_icon_from_context(item, display_area))
 
         menu.exec_(list_widget.mapToGlobal(pos))
@@ -3556,6 +3570,7 @@ def save_scripts_to_file(list_widget):
         print(f"脚本数据已成功保存到: {scripts_path}")
     except Exception as e:
         print(f"保存脚本数据失败: {e}")
+
 
 def execute_script_from_context(item, display_area):
     """从右键菜单执行脚本"""
@@ -3586,7 +3601,7 @@ def reload_icon_from_context(item, display_area):
     # 重置为默认图标，防止加载旧图标
     item.setIcon(QIcon(DEFAULT_ICON_PATH))
     appendLogWithEffect(display_area, f"正在重新加载 '{script_name}' 的图标...\n")
-
+    show_custom_notification(f"正在重新加载")
     # URL脚本：从网络重新获取图标
     if script_type == 'url':
         # 删除旧的缓存文件
@@ -3639,6 +3654,7 @@ def show_rename_dialog(list_widget, item):
 
 def show_modify_path_dialog(list_widget, item, display_area):
     """显示修改路径对话框"""
+
     script_data = item.data(Qt.UserRole)
     if not script_data:
         appendLogWithEffect(display_area, "错误：无法获取脚本数据。\n")
@@ -3657,7 +3673,7 @@ def show_modify_path_dialog(list_widget, item, display_area):
                 item.setData(Qt.UserRole, script_data)
                 # 重新加载图标
                 reload_icon_from_context(item, display_area)
-                # save_current_scripts() # 保存到文件
+                save_current_scripts()
                 appendLogWithEffect(display_area, f"脚本 '{script_name}' 网址已修改: {current_path} -> {new_url}\n")
                 QMessageBox.information(None, tr("成功"), tr("网址已更新"))
 
@@ -3670,7 +3686,7 @@ def show_modify_path_dialog(list_widget, item, display_area):
                 item.setData(Qt.UserRole, script_data)
                 # 重新加载图标
                 reload_icon_from_context(item, display_area)
-                # save_current_scripts() # 保存到文件
+                save_scripts(script_data)  # 保存到文件
                 appendLogWithEffect(display_area, f"脚本 '{script_name}' 路径已修改: {current_path} -> {new_path}\n")
                 QMessageBox.information(None, tr("成功"), tr("路径已更新"))
 
@@ -3705,7 +3721,6 @@ def create_merge_script(self):
                             self.completer_model.insertRow(0)
                             self.completer_model.setData(self.completer_model.index(0), name)
                             save_current_scripts()
-                            update_item_colors()
                             appendLogWithEffect(self.display_area,
                                                 f"创建合并脚本🔗 '{name}' 成功！包含 {len(selected_scripts)} 个子脚本\n")
                         else:
@@ -4138,6 +4153,7 @@ class FastScrollDelegate(QStyledItemDelegate):
         }
 
 
+# 图标获取函数
 class CreateScriptDialog(QDialog):
     def __init__(self, parent=None, list_widget=None, display_area=None, completer_model=None):
         super(CreateScriptDialog, self).__init__(parent)
@@ -4235,8 +4251,8 @@ class CreateScriptDialog(QDialog):
                 self.completer_model.insertRow(0)
                 self.completer_model.setData(self.completer_model.index(0), name)
                 save_current_scripts()
-                update_item_colors()
                 appendLogWithEffect(self.display_area, f"创建网页脚本🌐 '{name}' 成功！\n")
+                show_custom_notification("创建网页脚本🌐")
                 # 异步加载实际图标
                 row = self.list_widget.count() - 1
                 get_website_favicon(url, lambda icon: self.list_widget.item(row).setIcon(icon))
@@ -4255,8 +4271,8 @@ class CreateScriptDialog(QDialog):
                 self.completer_model.insertRow(0)
                 self.completer_model.setData(self.completer_model.index(0), name)
                 save_current_scripts()
-                update_item_colors()
                 appendLogWithEffect(self.display_area, f"创建软件脚本🖥️ '{name}' 成功！\n")
+                show_custom_notification(f"创建软件脚本🖥️")
                 # 异步加载实际图标
                 row = self.list_widget.count() - 1
                 get_file_icon(file_path, lambda icon: self.list_widget.item(row).setIcon(icon))
@@ -4290,15 +4306,12 @@ class CreateScriptDialog(QDialog):
                                 self.completer_model.insertRow(0)
                                 self.completer_model.setData(self.completer_model.index(0), name)
                                 save_current_scripts()
-                                update_item_colors()
                                 appendLogWithEffect(self.display_area,
                                                     f"创建合并脚本🔗 '{name}' 成功！包含 {len(selected_scripts)} 个子脚本\n")
                                 self.close()
         except Exception as e:
             appendLogWithEffect(self.display_area, f"Error creating merge script: {e}\n")
             QMessageBox.critical(self, tr('错误'), f"{tr('创建合并脚本时发生错误')}: {e}")
-
-
 
 
 # 夜间模式相关代码
@@ -4934,9 +4947,7 @@ class UnifiedItemDelegate(QStyledItemDelegate):
         return path
 
 
-
-
-
+# 列表控件
 class SmoothListWidget(QListWidget):
     def __init__(self, status_bar, parent=None):
         super().__init__(parent)
@@ -5008,7 +5019,6 @@ class SmoothListWidget(QListWidget):
             return
         script_name = script_data.get('name', '未知脚本')
         appendLogWithEffect(display_area, f"重新加载图标：{script_name}（功能待实现）\n")
-
 
     def update_animations(self):
         """更新所有项的动画状态"""
@@ -5205,24 +5215,10 @@ def show_create_script_dialog(parent, list_widget, display_area, completer_model
     dialog.exec_()
 
 
-def delayed_show_notification(parent_window):
-        """
-        延迟创建并显示欢迎通知，确保主窗口已完全加载。
-        """
-        # 创建通知窗口实例
-        parent_window.welcome_notification = WelcomeNotification(
-            parent=parent_window,
-        )
-        # 启动动画
-        parent_window.welcome_notification.show_animation()
-
 if __name__ == '__main__':
-
     app = QApplication(sys.argv)
     translator = QTranslator()
-    current_language = 'zh'
     app.installTranslator(translator)
     main_window = create_main_window()
     main_window.show()
-    delayed_show_notification(main_window)
     sys.exit(app.exec_())

@@ -460,17 +460,57 @@ def get_user_input_file(parent):
 
 # 获取资源文件路径（支持开发和打包环境）
 def get_resource_path(relative_path):
+    """
+    获取资源文件路径（支持开发和打包环境）。
+    优先使用EXE所在目录的resources文件夹，如果是scripts.json且不存在则复制或创建。
+
+    Args:
+        relative_path (str): 相对资源路径（如 "resources/scripts.json"）
+
+    Returns:
+        str: 资源文件的绝对路径
+    """
     if getattr(sys, 'frozen', False):
-        # 使用 EXE 所在目录作为基准路径
+        # 打包环境
         base_path = os.path.dirname(sys.executable)
         resources_dir = os.path.join(base_path, "resources")
-        # 如果资源目录不存在，则复制一份到 EXE 目录下
+        resource_path = os.path.join(base_path, relative_path)
+
+        # 确保resources目录存在
         if not os.path.exists(resources_dir):
             original_resources = os.path.join(sys._MEIPASS, "resources")
-            shutil.copytree(original_resources, resources_dir)
+            if os.path.exists(original_resources):
+                shutil.copytree(original_resources, resources_dir)
+                print(f"已复制资源文件夹到: {resources_dir}")
+            else:
+                os.makedirs(resources_dir, exist_ok=True)
+                print(f"创建空的资源文件夹: {resources_dir}")
+
+        # 特殊处理scripts.json
+        if relative_path.endswith("scripts.json"):
+            scripts_path = os.path.join(resources_dir, "scripts.json")
+            # 如果scripts.json不存在，从sys._MEIPASS复制或创建空文件
+            if not os.path.exists(scripts_path):
+                temp_scripts_path = os.path.join(sys._MEIPASS, "resources", "scripts.json")
+                if os.path.exists(temp_scripts_path):
+                    shutil.copy2(temp_scripts_path, scripts_path)
+                    print(f"已复制初始 scripts.json 到: {scripts_path}")
+                else:
+                    with open(scripts_path, 'w', encoding='utf-8') as file:
+                        json.dump([], file, ensure_ascii=False, indent=4)
+                    print(f"创建空的 scripts.json: {scripts_path}")
+            return scripts_path
+
+        # 其他资源文件优先使用EXE目录，如果不存在则回退到sys._MEIPASS
+        if os.path.exists(resource_path):
+            return resource_path
+        else:
+            temp_base_path = getattr(sys, '_MEIPASS', os.path.dirname(sys.executable))
+            return os.path.join(temp_base_path, relative_path)
     else:
+        # 开发环境
         base_path = os.path.abspath(".")
-    return os.path.join(base_path, relative_path)
+        return os.path.join(base_path, relative_path)
 
 
 
@@ -478,10 +518,19 @@ def get_resource_path(relative_path):
 
 # 加载脚本
 def load_scripts():
+    """
+    加载脚本列表从scripts.json文件。
+
+    Returns:
+        list: 脚本列表，如果加载失败返回空列表
+    """
     scripts_path = get_resource_path("resources/scripts.json")
+    print(f"尝试加载脚本文件: {scripts_path}")
     try:
         with open(scripts_path, 'r', encoding='utf-8') as file:
-            return json.load(file)
+            scripts = json.load(file)
+            print(f"成功加载脚本: {len(scripts)} 条")
+            return scripts
     except FileNotFoundError:
         print(f"脚本文件未找到: {scripts_path}")
         return []
@@ -491,12 +540,20 @@ def load_scripts():
 
 # 保存脚本
 def save_scripts(scripts):
+    """
+    保存脚本到scripts.json文件。
+    始终写入到EXE所在目录的resources文件夹。
+
+    Args:
+        scripts (list): 要保存的脚本列表
+    """
     scripts_path = get_resource_path("resources/scripts.json")
     try:
+        # 确保resources目录存在
+        os.makedirs(os.path.dirname(scripts_path), exist_ok=True)
         with open(scripts_path, 'w', encoding='utf-8') as file:
             json.dump(scripts, file, ensure_ascii=False, indent=4)
         print(f"脚本已保存到: {scripts_path}")
-        show_custom_notification("脚本已保存", 0)
     except Exception as e:
         print(f"保存脚本失败: {e}")
 
@@ -790,6 +847,8 @@ def get_wifi_info():
         CACHE['wifi_info'] = "WiFi信息: 获取失败"
         return CACHE['wifi_info']
 # 子函数：获取并格式化地理位置信息
+
+
 def get_formatted_geolocation():
     if 'geolocation' in CACHE:
         return CACHE['geolocation']
@@ -813,6 +872,7 @@ def get_formatted_geolocation():
         CACHE['geolocation'] = f"通过IP获取地理位置信息时出错: {e}"
         return CACHE['geolocation']
 
+
 def get_device_manufacturer():
     if 'device_manufacturer' in CACHE:
         return CACHE['device_manufacturer']
@@ -826,6 +886,9 @@ def get_device_manufacturer():
         print(f"获取设备制造商信息时出错: {e}")
         CACHE['device_manufacturer'] = "获取失败"
         return CACHE['device_manufacturer']
+
+
+
 def delete_script(script_list, script_name):
     """
     删除脚本。
@@ -921,5 +984,36 @@ GPU使用率: {GPUtil.getGPUs()[0].memoryUtil * 100 if GPUtil.getGPUs() else '�
 
 
 
+def get_city_and_region():
+    """
+    获取当前设备的城市和地区信息。
 
+    此函数通过调用 ip-api.com 的API，根据设备的公网IP查询地理位置。
+    它会返回一个包含城市和地区信息的字符串。
+
+    Returns:
+        str: 格式化后的城市和地区字符串，例如 "广州市, 广东省"。
+             如果获取失败，将返回"未知城市, 未知地区"。
+    """
+    try:
+        # 通过ip-api.com获取地理位置信息
+        response = requests.get('http://ip-api.com/json/?lang=zh-CN', timeout=5)
+        response.raise_for_status()  # 检查请求是否成功
+
+        location_data = response.json()
+
+        if location_data.get('status') == 'success':
+            city = location_data.get('city', '未知城市')
+            region = location_data.get('regionName', '未知地区')
+            return f"{city}{region}"
+        else:
+            log_message(f"通过IP查询地理位置失败: {location_data.get('message', '未知错误')}")
+            return "素未谋面"
+
+    except requests.exceptions.RequestException as e:
+        log_message(f"获取城市和地区时网络请求出错: {e}")
+        return "素未谋面"
+    except Exception as e:
+        log_message(f"获取城市和地区时发生意外错误: {e}")
+        return "素未谋面"
 

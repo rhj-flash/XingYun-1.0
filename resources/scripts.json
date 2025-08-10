@@ -1,33 +1,13 @@
 [
     {
-        "name": "44",
+        "name": "v2rayN2111",
         "type": "file",
-        "value": "D:/VPN/v2rayN-Core/v2rayN.exe"
+        "value": "D:/VPN/v2rayN-With-Core/v2rayN.exe"
     },
     {
-        "name": "Runoob1",
-        "type": "url",
-        "value": "https://www.runoob.com/"
-    },
-    {
-        "name": "Gemini",
-        "type": "url",
-        "value": "https://gemini.google.com"
-    },
-    {
-        "name": "全栈课程",
+        "name": "全栈课程1",
         "type": "url",
         "value": "https://www.bilibili.com/video/BV1nV4y1s7ZN?spm_id_from=333.788.videopod.episodes&vd_source=6be55cf96cb2a0cd178874467cc26ab1&p=10"
-    },
-    {
-        "name": "chat_gpt",
-        "type": "url",
-        "value": "https://chatgpt.com/"
-    },
-    {
-        "name": "Le Chat - Mistral AI  (VPN节点开伦敦)",
-        "type": "url",
-        "value": "https://chat.mistral.ai/chat"
     },
     {
         "name": "Grok",
@@ -35,9 +15,29 @@
         "value": "https://grok.com/chat/"
     },
     {
+        "name": "Gemini",
+        "type": "url",
+        "value": "https://gemini.google.com"
+    },
+    {
         "name": "deep_seek",
         "type": "url",
         "value": "https://chat.deepseek.com/"
+    },
+    {
+        "name": "Runoob",
+        "type": "url",
+        "value": "https://www.runoob.com/"
+    },
+    {
+        "name": "Le Chat - Mistral AI  (VPN节点开伦敦)",
+        "type": "url",
+        "value": "https://chat.mistral.ai/chat"
+    },
+    {
+        "name": "chat_gpt",
+        "type": "url",
+        "value": "https://chatgpt.com/"
     },
     {
         "name": "单词学习",
@@ -65,38 +65,24 @@
         "value": "https://www.bilibili.com/"
     },
     {
-        "name": "VPN_charge(VPN充值网址)",
-        "type": "url",
-        "value": "https://sakuran.org/"
-    },
-    {
         "name": "雷神加速器",
         "type": "file",
         "value": "D:/雷神/LeiGod_Acc/leigod.exe"
     },
     {
-<<<<<<< HEAD
-=======
-        "name": "Wikipedia（维基百科）",
+        "name": "VPN_charge(VPN充值网址)",
         "type": "url",
-        "value": "https://zh.wikipedia.org/"
+        "value": "https://sakuran.org/"
     },
     {
->>>>>>> 5f49b523be0f4f1d41a349d260f125de54ffe7ee
         "name": "微信",
         "type": "file",
         "value": "D:/wechat/WeChat.exe"
     },
     {
-<<<<<<< HEAD
         "name": "Wikipedia（维基百科）",
         "type": "url",
         "value": "https://zh.wikipedia.org/"
-=======
-        "name": "CSDN",
-        "type": "url",
-        "value": "https://blog.csdn.net/RHJflash?spm=1000.2115.3001.5343/"
->>>>>>> 5f49b523be0f4f1d41a349d260f125de54ffe7ee
     },
     {
         "name": "电影",
@@ -109,33 +95,23 @@
         "value": "https://simpletex.cn/ai/latex_ocr"
     },
     {
+        "name": "CSDN",
+        "type": "url",
+        "value": "https://blog.csdn.net/RHJflash?spm=1000.2115.3001.5343/"
+    },
+    {
+        "name": "软件网站",
+        "type": "url",
+        "value": "https://www.rjsos.com/win"
+    },
+    {
         "name": "绘制流程图",
         "type": "url",
         "value": "https://www.processon.com/diagrams"
     },
     {
-        "name": "PDF转换网址🔄",
+        "name": "122",
         "type": "url",
-        "value": "https://www.ilovepdf.com/zh-cn"
-    },
-    {
-        "name": "破译软件",
-        "type": "url",
-        "value": "https://www.rjsos.com/win"
-    },
-    {
-        "name": "音频文件转换",
-        "type": "url",
-        "value": "https://www.bearaudiotool.com/zh/tools-list/"
-    },
-    {
-        "name": "GIF制作（拖入视频后直接导出GIF  10帧）",
-        "type": "url",
-        "value": "https://www.photopea.com/"
-    },
-    {
-        "name": "1",
-        "type": "url",
-        "value": "https://www.google.com"
+        "value": "https://www.google.com/"
     }
 ]
