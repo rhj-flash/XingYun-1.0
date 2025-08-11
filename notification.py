@@ -1,8 +1,7 @@
 # notification.py
-
 import datetime
 import sys
-from PyQt5.QtWidgets import QWidget, QLabel, QGraphicsOpacityEffect, QHBoxLayout, QApplication, QDesktopWidget
+from PyQt5.QtWidgets import QWidget, QLabel, QGraphicsOpacityEffect, QHBoxLayout, QApplication
 from PyQt5.QtCore import Qt, QPropertyAnimation, QRect, QTimer, QEasingCurve, QPoint, pyqtSignal
 from PyQt5.QtGui import QColor, QFont, QPalette, QIcon, QPixmap
 
@@ -95,8 +94,9 @@ class WelcomeNotification(QWidget):
                 QLabel {
                     border: 0px solid #555555;
                     border-radius: 30px;
+                    /* 修改渐变颜色，实现两边黑中间白的效果 */
                     background-color: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
-                                                    stop: 1 #000000, stop: 0.8 #EDF1F7);
+                                                    stop: 0 #000000, stop: 0.2 #EDF1F7, stop: 0.8 #EDF1F7, stop: 1 #000000);
                     font-family: 'Comic Sans MS', 'KaiTi', sans-serif;
                     font-size: 18px;
                     font-weight: bold;
@@ -114,8 +114,9 @@ class WelcomeNotification(QWidget):
                 QLabel {
                     border: 0px solid #CCCCCC;
                     border-radius: 30px;
+                    /* 修改渐变颜色，实现两边黑中间白的效果 */
                     background-color: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
-                                                    stop: 1 #000000, stop: 0.8 #EDF1F7);
+                                                    stop: 0 #000000, stop: 0.2 #EDF1F7, stop: 0.8 #EDF1F7, stop: 1 #000000);
                     font-family: 'Comic Sans MS', 'KaiTi', sans-serif;
                     font-size: 18px;
                     font-weight: bold;
@@ -128,6 +129,14 @@ class WelcomeNotification(QWidget):
                     background-color: transparent;
                 }
             """)
+
+    def update_hide_timer(self, duration: int):
+        """
+        动态更新通知的隐藏计时器。如果计时器正在运行，则停止并用新的时长重新启动。
+        """
+        if self.hide_timer.isActive():
+            self.hide_timer.stop()
+        self.hide_timer.start(duration)
 
     def show_animation(self, end_y: int):
         """

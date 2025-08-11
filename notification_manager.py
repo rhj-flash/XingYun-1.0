@@ -89,6 +89,7 @@ class NotificationManager:
     def show_notification(self, message: str, is_night_mode: bool, display_duration: int = 5000, icon=None):
         """
         创建一个新的通知窗口并显示。
+        当有新通知出现时，会缩短所有现有通知的显示时间，以确保正确的消失顺序。
 
         Args:
             message (str): 通知窗口需要显示的文本内容。
@@ -99,12 +100,25 @@ class NotificationManager:
         desktop = QApplication.desktop()
         desktop_rect = desktop.availableGeometry()
 
-        # 硬性限制通知数量最多为2个
+        # 硬性限制通知数量最多为5个
         max_notifications = 2
         if len(self.active_notifications) >= max_notifications:
             oldest_notification = self.active_notifications.pop(0)
             oldest_notification.close_notification()
+            # 在移除旧通知后立即重新定位，为新通知腾出空间
+            self.reposition_notifications()
             print(f"[{datetime.now().strftime('%H:%M:%S')}] 达到最大通知数量({max_notifications})，移除最旧的通知。")
+
+        # 调整所有现有通知的消失时间，使其在下一个通知出现后依次消失
+        # 新通知的显示时间 = 动画时间 + 延迟时间
+        new_notification_show_duration = display_duration + 500
+        # 缩短现有通知的显示时间，使其比新通知的显示时间短
+        # 这里设置为新通知显示时间的一半，或者一个固定较短的时间
+        shortened_duration = new_notification_show_duration // 2
+
+        # 遍历现有通知，并缩短它们的显示时间
+        for notification in self.active_notifications:
+            notification.update_hide_timer(shortened_duration)
 
         # 计算新通知的最终位置
         new_notification_y = desktop_rect.y() + desktop_rect.height() - 100 - 20
@@ -230,7 +244,7 @@ if __name__ == "__main__":
     def send_next_notification():
         if notifications_to_send:
             message = notifications_to_send.pop(0)
-            show_custom_notification(message, display_duration=3000)
+            show_custom_notification(message, display_duration=5000)
         else:
             timer.stop()
 

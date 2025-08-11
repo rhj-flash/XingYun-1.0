@@ -1,48 +1,8 @@
 [
     {
-        "name": "v2rayN2111",
+        "name": "v2rayN",
         "type": "file",
         "value": "D:/VPN/v2rayN-With-Core/v2rayN.exe"
-    },
-    {
-        "name": "全栈课程1",
-        "type": "url",
-        "value": "https://www.bilibili.com/video/BV1nV4y1s7ZN?spm_id_from=333.788.videopod.episodes&vd_source=6be55cf96cb2a0cd178874467cc26ab1&p=10"
-    },
-    {
-        "name": "Grok",
-        "type": "url",
-        "value": "https://grok.com/chat/"
-    },
-    {
-        "name": "Gemini",
-        "type": "url",
-        "value": "https://gemini.google.com"
-    },
-    {
-        "name": "deep_seek",
-        "type": "url",
-        "value": "https://chat.deepseek.com/"
-    },
-    {
-        "name": "Runoob",
-        "type": "url",
-        "value": "https://www.runoob.com/"
-    },
-    {
-        "name": "Le Chat - Mistral AI  (VPN节点开伦敦)",
-        "type": "url",
-        "value": "https://chat.mistral.ai/chat"
-    },
-    {
-        "name": "chat_gpt",
-        "type": "url",
-        "value": "https://chatgpt.com/"
-    },
-    {
-        "name": "单词学习",
-        "type": "url",
-        "value": "https://qwerty.kaiyi.cool"
     },
     {
         "name": "GitHub",
@@ -50,9 +10,49 @@
         "value": "https://github.com/"
     },
     {
+        "name": "Gemini",
+        "type": "url",
+        "value": "https://gemini.google.com"
+    },
+    {
+        "name": "Runoob",
+        "type": "url",
+        "value": "https://www.runoob.com/"
+    },
+    {
+        "name": "Grok",
+        "type": "url",
+        "value": "https://grok.com/chat/"
+    },
+    {
+        "name": "chat_gpt",
+        "type": "url",
+        "value": "https://chatgpt.com/"
+    },
+    {
+        "name": "全栈课程1",
+        "type": "url",
+        "value": "https://www.bilibili.com/video/BV1nV4y1s7ZN?spm_id_from=333.788.videopod.episodes&vd_source=6be55cf96cb2a0cd178874467cc26ab1&p=10"
+    },
+    {
+        "name": "Le Chat - Mistral AI  (VPN节点开伦敦)",
+        "type": "url",
+        "value": "https://chat.mistral.ai/chat"
+    },
+    {
         "name": "YouTube",
         "type": "url",
         "value": "https://www.youtube.com/"
+    },
+    {
+        "name": "deep_seek",
+        "type": "url",
+        "value": "https://chat.deepseek.com/"
+    },
+    {
+        "name": "单词学习",
+        "type": "url",
+        "value": "https://qwerty.kaiyi.cool"
     },
     {
         "name": "Google",
@@ -80,19 +80,9 @@
         "value": "D:/wechat/WeChat.exe"
     },
     {
-        "name": "Wikipedia（维基百科）",
+        "name": "看电影",
         "type": "url",
-        "value": "https://zh.wikipedia.org/"
-    },
-    {
-        "name": "电影",
-        "type": "url",
-        "value": "https://www.chinatownfilm.com/"
-    },
-    {
-        "name": "公式识别网站",
-        "type": "url",
-        "value": "https://simpletex.cn/ai/latex_ocr"
+        "value": "https://ixkw7.cc/play/102471/21.html"
     },
     {
         "name": "CSDN",
@@ -100,18 +90,28 @@
         "value": "https://blog.csdn.net/RHJflash?spm=1000.2115.3001.5343/"
     },
     {
+        "name": "Wikipedia（维基百科）",
+        "type": "url",
+        "value": "https://zh.wikipedia.org/"
+    },
+    {
+        "name": "公式识别网站",
+        "type": "url",
+        "value": "https://simpletex.cn/ai/latex_ocr"
+    },
+    {
         "name": "软件网站",
         "type": "url",
         "value": "https://www.rjsos.com/win"
     },
     {
+        "name": "电影",
+        "type": "url",
+        "value": "https://www.chinatownfilm.com/"
+    },
+    {
         "name": "绘制流程图",
         "type": "url",
         "value": "https://www.processon.com/diagrams"
-    },
-    {
-        "name": "122",
-        "type": "url",
-        "value": "https://www.google.com/"
     }
 ]
