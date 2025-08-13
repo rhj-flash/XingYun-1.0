@@ -5,6 +5,16 @@
         "value": "D:/VPN/v2rayN-With-Core/v2rayN.exe"
     },
     {
+        "name": "Grok",
+        "type": "url",
+        "value": "https://grok.com/chat/"
+    },
+    {
+        "name": "Runoob",
+        "type": "url",
+        "value": "https://www.runoob.com/"
+    },
+    {
         "name": "GitHub",
         "type": "url",
         "value": "https://github.com/"
@@ -15,24 +25,14 @@
         "value": "https://gemini.google.com"
     },
     {
-        "name": "Runoob",
+        "name": "全栈课程1",
         "type": "url",
-        "value": "https://www.runoob.com/"
-    },
-    {
-        "name": "Grok",
-        "type": "url",
-        "value": "https://grok.com/chat/"
+        "value": "https://www.bilibili.com/video/BV1nV4y1s7ZN?spm_id_from=333.788.videopod.episodes&vd_source=6be55cf96cb2a0cd178874467cc26ab1&p=10"
     },
     {
         "name": "chat_gpt",
         "type": "url",
         "value": "https://chatgpt.com/"
-    },
-    {
-        "name": "全栈课程1",
-        "type": "url",
-        "value": "https://www.bilibili.com/video/BV1nV4y1s7ZN?spm_id_from=333.788.videopod.episodes&vd_source=6be55cf96cb2a0cd178874467cc26ab1&p=10"
     },
     {
         "name": "Le Chat - Mistral AI  (VPN节点开伦敦)",
@@ -90,14 +90,14 @@
         "value": "https://blog.csdn.net/RHJflash?spm=1000.2115.3001.5343/"
     },
     {
-        "name": "Wikipedia（维基百科）",
-        "type": "url",
-        "value": "https://zh.wikipedia.org/"
-    },
-    {
         "name": "公式识别网站",
         "type": "url",
         "value": "https://simpletex.cn/ai/latex_ocr"
+    },
+    {
+        "name": "Wikipedia（维基百科）",
+        "type": "url",
+        "value": "https://zh.wikipedia.org/"
     },
     {
         "name": "软件网站",
@@ -107,11 +107,26 @@
     {
         "name": "电影",
         "type": "url",
-        "value": "https://www.chinatownfilm.com/"
+        "value": "https://www.chinatownfilm.com"
     },
     {
         "name": "绘制流程图",
         "type": "url",
         "value": "https://www.processon.com/diagrams"
+    },
+    {
+        "name": "1",
+        "type": "url",
+        "value": "https://1"
+    },
+    {
+        "name": "q",
+        "type": "url",
+        "value": "https://q"
+    },
+    {
+        "name": "1",
+        "type": "url",
+        "value": "https://1"
     }
 ]

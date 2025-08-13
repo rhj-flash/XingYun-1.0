@@ -32,19 +32,18 @@ from pathlib import Path
 from notification_manager import show_custom_notification
 from utils import get_resource_path, CACHE_LOCK, ICON_CACHE, ICON_EXECUTOR  # 从新文件导入
 
-
 # 脚本路径
 scripts_path = get_resource_path("resources/scripts.json")
 
+
 # 默认图标路径
-DEFAULT_ICON_PATH = get_resource_path('imge.png')
+DEFAULT_ICON_PATH = get_resource_path("resources/imge.png")
 
 # 缓存机制
 CACHE = {}
 
 # 线程池
 ICON_EXECUTOR = ThreadPoolExecutor(max_workers=5)
-
 
 # **提前加载字典文件**
 dictionary_path = get_resource_path('resources/english_words.txt')
@@ -54,7 +53,6 @@ translation_to_word = {}  # 直接查找翻译 -> 单词
 all_words = []  # 仅存储所有英文单词，用于模糊匹配功能
 
 dictionary_data = []
-
 
 if os.path.exists(dictionary_path):
     with open(dictionary_path, 'r', encoding='utf-8') as file:
@@ -82,10 +80,9 @@ else:
 executor = ThreadPoolExecutor(max_workers=5)
 
 
-
-
 def get_website_favicon(url, callback=None):
     """异步获取网站 favicon"""
+
     def fetch_icon():
         with CACHE_LOCK:
             if url in ICON_CACHE:
@@ -226,10 +223,10 @@ def get_file_icon(file_path, callback=None):
         return fetch_icon()
 
 
-
 def appendLog(log_text_edit, message):
     log_text_edit.append(message)
     log_text_edit.verticalScrollBar().setValue(log_text_edit.verticalScrollBar().maximum())
+
 
 def update_log(log_text):
     log_file_path = get_resource_path('update_log.txt')
@@ -241,6 +238,8 @@ def update_log(log_text):
             log_text.append(log_content)
     except FileNotFoundError:
         log_text.setText("日志文件未找到！")
+
+
 def clear_display(display):
     """
     清空显示区域，并确保终止正在进行的日志更新
@@ -249,6 +248,8 @@ def clear_display(display):
         display.log_updater.stop()
         display.log_updater.wait()
     display.clear()
+    show_custom_notification(message="display_screen已初始化", icon=DEFAULT_ICON_PATH)
+
 
 def query_and_display_result(word, result_label):
     """ 查询单词并显示结果 """
@@ -260,6 +261,7 @@ def query_and_display_result(word, result_label):
     else:
         result_label.setText(f"⚠️ 未找到 '{word}'！")
 
+
 # **读取并存入字典**
 if os.path.exists(dictionary_path):
     with open(dictionary_path, 'r', encoding='utf-8') as file:
@@ -269,6 +271,7 @@ if os.path.exists(dictionary_path):
                 english_word = parts[0].strip().lower()
                 translation = parts[1].strip()
                 dictionary_data.append({"word": english_word, "translation": translation})
+
 
 def query_local_dictionary(word, top_n=10):
     """
@@ -320,12 +323,6 @@ def query_local_dictionary(word, top_n=10):
     # **按相似度排序**
     matches.sort(reverse=True, key=lambda x: x[0])
     return [{"word": eng, "translation": trans} for _, eng, trans in matches[:top_n]]
-
-
-
-
-
-
 
 
 class CreateScriptDialog(QDialog):
@@ -401,9 +398,10 @@ class CreateScriptDialog(QDialog):
         print("创建软件脚本")
         self.accept()
 
+
 class LogUpdater(QThread):
     update_signal = pyqtSignal(str)  # 发送更新文本的信号
-    finished_signal = pyqtSignal()   # 发送完成信号
+    finished_signal = pyqtSignal()  # 发送完成信号
 
     def __init__(self, log_text_edit, message, speed=1, batch_size=1):
         """
@@ -433,13 +431,21 @@ class LogUpdater(QThread):
     def stop(self):
         """外部调用时立即停止"""
         self.running = False  # 终止标志位
+
+
 def show_create_script_dialog(parent):
     dialog = CreateScriptDialog(parent)
     dialog.exec_()
+
+
 def open_url(url):
     webbrowser.open(url)
+
+
 def open_file(file_path):
     os.startfile(file_path)
+
+
 def get_user_input_url(parent):
     url, ok = QInputDialog.getText(parent, "输入网址", "请输入网址:")
     if ok and url:
@@ -448,6 +454,8 @@ def get_user_input_url(parent):
             name = url
         return name, url
     return None, None
+
+
 def get_user_input_file(parent):
     file_path, _ = QFileDialog.getOpenFileName(parent, "选择文件", "", "所有文件 (*)")
     if file_path:
@@ -513,9 +521,6 @@ def get_resource_path(relative_path):
         return os.path.join(base_path, relative_path)
 
 
-
-
-
 # 加载脚本
 def load_scripts():
     """
@@ -538,6 +543,7 @@ def load_scripts():
         print(f"加载脚本失败: {e}")
         return []
 
+
 # 保存脚本
 def save_scripts(scripts):
     """
@@ -558,9 +564,6 @@ def save_scripts(scripts):
         print(f"保存脚本失败: {e}")
 
 
-
-
-
 def generateDivider(text_edit):
     """
     生成分割线
@@ -569,8 +572,9 @@ def generateDivider(text_edit):
     font_metrics = QFontMetricsF(text_edit.font())  # 使用浮点精度计算字体宽度
     char_width = font_metrics.horizontalAdvance("〰")  # 计算"▓▒░"的像素宽度
     width = int(usable_width / char_width)  # 计算整行可以放多少个"▓▒░"
-    divider = "〰" * max(1, width-1)  # 确保最少 1 个
+    divider = "〰" * max(1, width - 1)  # 确保最少 1 个
     return divider
+
 
 def resizeEvent(self, event):
     """
@@ -579,6 +583,7 @@ def resizeEvent(self, event):
     if hasattr(self, "display_area"):  # 确保日志窗口存在
         self.divider = generateDivider(self.display_area)  # 生成新的分割线
     super().resizeEvent(event)
+
 
 def appendLogWithEffect(log_text_edit, message, speed=5, batch_size=50, include_timestamp=True):
     """
@@ -607,8 +612,11 @@ def appendLogWithEffect(log_text_edit, message, speed=5, batch_size=50, include_
 
     log_text_edit.log_updater.start()  # 启动子线程
 
+
 def log_message(message):
     print(message)
+
+
 # 获取内存条型号函数
 def get_memory_model():
     if 'memory_model' in CACHE:
@@ -629,6 +637,8 @@ def get_memory_model():
         log_message(f"获取内存条型号时出错: {e}")
         CACHE['memory_model'] = ["获取失败"]
         return CACHE['memory_model']
+
+
 def get_cpu_temperature():
     if 'cpu_temperature' in CACHE:
         return CACHE['cpu_temperature']
@@ -667,6 +677,8 @@ def get_cpu_temperature():
         log_message(f"获取 CPU 温度时出错(需管理员权限): {e}")
         CACHE['cpu_temperature'] = ["CPU温度(需管理员权限): 获取失败"]
         return CACHE['cpu_temperature']
+
+
 def get_gpu_temperature():
     if 'gpu_temperature' in CACHE:
         return CACHE['gpu_temperature']
@@ -678,6 +690,8 @@ def get_gpu_temperature():
         log_message(f"获取 GPU 温度时出错: {e}")
         CACHE['gpu_temperature'] = ["GPU温度: 获取失败"]
         return CACHE['gpu_temperature']
+
+
 def get_disk_info():
     if 'disk_info' in CACHE:
         return CACHE['disk_info']
@@ -704,6 +718,8 @@ def get_disk_info():
         log_message(f"获取磁盘信息时出错: {e}")
         CACHE['disk_info'] = ["磁盘信息: 获取失败"]
         return CACHE['disk_info']
+
+
 def get_network_info():
     if 'network_info' in CACHE:
         return CACHE['network_info']
@@ -722,7 +738,8 @@ def get_network_info():
                     iface_details[iface_name].append(f"  MAC地址: {addr.address}")
 
         for iface_name, details in iface_details.items():
-            interfaces.append(f"〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰\n{iface_name}:\n" + "\n".join(details) + "\n")
+            interfaces.append(
+                f"〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰〰\n{iface_name}:\n" + "\n".join(details) + "\n")
 
         CACHE['network_info'] = interfaces
         return CACHE['network_info']
@@ -730,6 +747,8 @@ def get_network_info():
         log_message(f"获取网络信息时出错: {e}")
         CACHE['network_info'] = ["网络信息: 获取失败"]
         return CACHE['network_info']
+
+
 def get_boot_time():
     if 'boot_time' in CACHE:
         return CACHE['boot_time']
@@ -741,6 +760,8 @@ def get_boot_time():
         log_message(f"获取系统启动时间时出错: {e}")
         CACHE['boot_time'] = "系统启动时间: 获取失败"
         return CACHE['boot_time']
+
+
 def get_wifi_info():
     if 'wifi_info' in CACHE:
         return CACHE['wifi_info']
@@ -846,6 +867,8 @@ def get_wifi_info():
         print(f"获取 WiFi 信息时出错: {e}")
         CACHE['wifi_info'] = "WiFi信息: 获取失败"
         return CACHE['wifi_info']
+
+
 # 子函数：获取并格式化地理位置信息
 
 
@@ -866,7 +889,8 @@ def get_formatted_geolocation():
         zip_code = location_data.get('zip', '未知邮政编码')
 
         # 格式化返回地理位置信息
-        CACHE['geolocation'] = f"纬度 {lat}, 经度 {lon}\n城市: {city}, 省份: {region}, 地区: {country}, 邮政编码: {zip_code}"
+        CACHE[
+            'geolocation'] = f"纬度 {lat}, 经度 {lon}\n城市: {city}, 省份: {region}, 地区: {country}, 邮政编码: {zip_code}"
         return CACHE['geolocation']
     except Exception as e:
         CACHE['geolocation'] = f"通过IP获取地理位置信息时出错: {e}"
@@ -888,7 +912,6 @@ def get_device_manufacturer():
         return CACHE['device_manufacturer']
 
 
-
 def delete_script(script_list, script_name):
     """
     删除脚本。
@@ -900,6 +923,8 @@ def delete_script(script_list, script_name):
     updated_list = [script for script in script_list if script['name'] != script_name]
     save_scripts(updated_list)
     return updated_list
+
+
 def update_script_path(script_list, script_name, new_value, display_area=None):
     """
     更新脚本的路径或网址。
@@ -919,6 +944,7 @@ def update_script_path(script_list, script_name, new_value, display_area=None):
                 appendLogWithEffect(display_area, f"脚本 '{script_name}' 的路径已更新\n")
             return True, old_value
     return False, None
+
 
 def get_computer_info():
     try:
@@ -966,7 +992,7 @@ GPU使用率: {GPUtil.getGPUs()[0].memoryUtil * 100 if GPUtil.getGPUs() else '�
 内存信息：
 总内存: {memory_info.total / (1024 ** 3):.2f} GB
 内存使用率: {memory_info.percent}%
-{' '.join([f'内存条 {i+1}: {model}' for i, model in enumerate(memory_models)])}
+{' '.join([f'内存条 {i + 1}: {model}' for i, model in enumerate(memory_models)])}
 
 磁盘空间:{' '.join(disk_info)}
 
@@ -980,8 +1006,6 @@ GPU使用率: {GPUtil.getGPUs()[0].memoryUtil * 100 if GPUtil.getGPUs() else '�
     except Exception as e:
         log_message(f"获取计算机信息时出错: {e}")
         return "获取计算机信息失败"
-
-
 
 
 def get_city_and_region():
@@ -1005,7 +1029,7 @@ def get_city_and_region():
         if location_data.get('status') == 'success':
             city = location_data.get('city', '未知城市')
             region = location_data.get('regionName', '未知地区')
-            return f"{city}{region}"
+            return f"{region}{city}"
         else:
             log_message(f"通过IP查询地理位置失败: {location_data.get('message', '未知错误')}")
             return "素未谋面"
@@ -1016,4 +1040,3 @@ def get_city_and_region():
     except Exception as e:
         log_message(f"获取城市和地区时发生意外错误: {e}")
         return "素未谋面"
-

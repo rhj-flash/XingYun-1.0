@@ -668,6 +668,7 @@ def get_website_favicon(url, script_name, callback=None):
                     with CACHE_LOCK:
                         ICON_CACHE[url] = icon
                     print(f"DEBUG: 从缓存加载图标: {cache_file}")
+                    status_bar.setText(f"DEBUG: 从缓存加载图标: {cache_file}")
                     return icon
             except Exception as e:
                 print(f"❌ 缓存文件读取失败: {e}")
@@ -1302,7 +1303,7 @@ def create_main_window():
 
     main_window = QWidget()
     main_window.setGeometry(100, 100, 1024, 768)
-    main_window.setWindowTitle(tr('Xing_yun V1.0(@Rhj_flash)'))
+    main_window.setWindowTitle(tr('Xing_yun V-1.0'))
 
     show_greeting_notification()
 
@@ -1344,7 +1345,8 @@ def create_main_window():
     main_window.resizeEvent = resizeEvent
 
     # 自定义标题栏
-    global title_bar
+    global title_bar, title_label
+
     title_bar = QWidget()
     title_bar.setFixedHeight(30)
     title_bar.setStyleSheet("background-color: #F0F2F5; border-top-left-radius: 15px; border-top-right-radius: 15px;")
@@ -1353,15 +1355,20 @@ def create_main_window():
     title_bar_layout.setContentsMargins(0, 0, 0, 0)
     title_bar_layout.setSpacing(0)
 
-    title_label = QLabel(tr('Xing_yun_Win10sys(@Rhj_flash) V-1.0'))
+    original_title_text = "Xing_yun V-1.0"  # 保存原始完整文本
+    title_label = QLabel(original_title_text)
     title_label.setStyleSheet("""
         font-family: 'Comic Sans MS', 'KaiTi', sans-serif;
         font-size: 16px;
         font-weight: bold;
         padding-left: 10px;
     """)
+    title_label.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)  # 固定尺寸策略，防止拉伸
+    title_label.setMaximumWidth(200)  # 设置最大宽度，允许收缩（可根据需求调整）
     title_bar_layout.addWidget(title_label)
     title_bar_layout.addStretch()
+
+
 
     # ****************** 新增 GitHub 按钮代码 ******************
     # 定义打开 GitHub 链接的函数
@@ -1387,9 +1394,19 @@ def create_main_window():
             """)
         # print(f"警告：未找到 GitHub 图标文件: {github_icon_path}") # 调试语句
 
-    github_button.setFixedSize(35, 35)  # 设置固定大小
+    github_button.setFixedSize(32, 32)  # 设置固定大小
     github_button.clicked.connect(open_github_link)  # 连接点击事件
     title_bar_layout.addWidget(github_button)  # 将按钮添加到布局中
+    # ****************** 新增代码结束 ******************
+
+    # ****************** 新增：折叠/展开侧边栏按钮 ******************
+    toggle_button = QPushButton("﹤")
+    toggle_button.setFixedSize(25, 25)
+    toggle_button.setToolTip("折叠/展开右侧面板")
+    toggle_button.setStyleSheet("""
+            QPushButton { font-size: 28px; padding: 0px; text-align: center; }
+        """)
+    title_bar_layout.addWidget(toggle_button)
     # ****************** 新增代码结束 ******************
 
     # 最小化按钮
@@ -1442,22 +1459,97 @@ def create_main_window():
 
     main_layout.addWidget(title_bar)
 
-    # 允许拖动窗口
-    main_window.old_pos = None
+    # ****************** 修改：允许拖动和边缘缩放窗口 ******************
+    main_window.resize_margin = 8  # 边缘缩放的检测范围（像素）
+    main_window.is_resizing = False
+    main_window.drag_position = None
+    main_window.resize_edge = None
 
     def mousePressEvent(event):
+        """
+        鼠标按下事件，判断是拖动窗口还是缩放窗口。
+        """
         if event.button() == Qt.LeftButton:
-            main_window.old_pos = event.globalPos()
+            pos = event.pos()
+            edges = []
+            if pos.x() < main_window.resize_margin: edges.append('left')
+            if pos.x() > main_window.width() - main_window.resize_margin: edges.append('right')
+            if pos.y() < main_window.resize_margin: edges.append('top')
+            if pos.y() > main_window.height() - main_window.resize_margin: edges.append('bottom')
 
-    def mouseReleaseEvent(event):
-        if event.button() == Qt.LeftButton:
-            main_window.old_pos = None
+            main_window.resize_edge = "".join(edges)
+            if main_window.resize_edge:
+                # 在边缘，准备缩放
+                main_window.is_resizing = True
+                main_window.drag_position = event.globalPos()
+            elif title_bar.rect().contains(pos):
+                # 在标题栏，准备拖动
+                main_window.is_resizing = False
+                main_window.drag_position = event.globalPos()
+            else:
+                # 其他区域，不响应
+                main_window.drag_position = None
+        QWidget.mousePressEvent(main_window, event)
 
     def mouseMoveEvent(event):
-        if not main_window.old_pos: return
-        delta = event.globalPos() - main_window.old_pos
-        main_window.move(main_window.pos() + delta)
-        main_window.old_pos = event.globalPos()
+        """
+        鼠标移动事件，执行拖动或缩放操作。
+        """
+        pos = event.pos()
+        # 如果鼠标左键没有按下，则只更新光标形状
+        if not (event.buttons() & Qt.LeftButton):
+            cursor_shape = Qt.ArrowCursor
+            edges = []
+            if pos.x() < main_window.resize_margin: edges.append('left')
+            if pos.x() > main_window.width() - main_window.resize_margin: edges.append('right')
+            if pos.y() < main_window.resize_margin: edges.append('top')
+            if pos.y() > main_window.height() - main_window.resize_margin: edges.append('bottom')
+
+            edge = "".join(edges)
+            if edge in ['top', 'bottom']:
+                cursor_shape = Qt.SizeVerCursor
+            elif edge in ['left', 'right']:
+                cursor_shape = Qt.SizeHorCursor
+            elif edge in ['topleft', 'bottomright']:
+                cursor_shape = Qt.SizeFDiagCursor
+            elif edge in ['topright', 'bottomleft']:
+                cursor_shape = Qt.SizeBDiagCursor
+            main_window.setCursor(cursor_shape)
+
+        # 如果鼠标左键按下且已记录起始位置
+        elif main_window.drag_position is not None:
+            delta = event.globalPos() - main_window.drag_position
+            if main_window.is_resizing:
+                # 缩放窗口
+                rect = main_window.geometry()
+                min_width, min_height = main_window.minimumSize()
+
+                if 'left' in main_window.resize_edge:
+                    if rect.width() - delta.x() > min_width: rect.setLeft(rect.left() + delta.x())
+                if 'right' in main_window.resize_edge:
+                    if rect.width() + delta.x() > min_width: rect.setRight(rect.right() + delta.x())
+                if 'top' in main_window.resize_edge:
+                    if rect.height() - delta.y() > min_height: rect.setTop(rect.top() + delta.y())
+                if 'bottom' in main_window.resize_edge:
+                    if rect.height() + delta.y() > min_height: rect.setBottom(rect.bottom() + delta.y())
+
+                main_window.setGeometry(rect)
+            else:
+                # 拖动窗口
+                main_window.move(main_window.pos() + delta)
+
+            main_window.drag_position = event.globalPos()
+        QWidget.mouseMoveEvent(main_window, event)
+
+    def mouseReleaseEvent(event):
+        """
+        鼠标释放事件，重置状态。
+        """
+        main_window.is_resizing = False
+        main_window.drag_position = None
+        main_window.setCursor(Qt.ArrowCursor)
+        QWidget.mouseReleaseEvent(main_window, event)
+
 
     def showEvent(event):
         """在主窗口完全显示后，启动欢迎通知的动画。"""
@@ -1643,7 +1735,6 @@ def create_main_window():
     min_upload_speed = float('inf')
 
     def run_speed_test():
-        show_custom_notification("📡🔴网络测试开始")
         """实时获取 WiFi 和网络的详细信息，呈现生动、直观的网络状态"""
         global last_bytes_sent, last_bytes_recv, last_time
         global max_download_speed, min_download_speed, max_upload_speed, min_upload_speed
@@ -1833,6 +1924,7 @@ def create_main_window():
                 f"📡 {current_network} | {connection_state} | "
                 f"↓ {actual_download:.2f} Mbps | ↑ {actual_upload:.2f} Mbps"
             )
+
             if len(status_text) > 70:  # 限制状态栏文本长度
                 status_text = status_text[:70] + "..."
             update_status_bar(status_text)
@@ -1958,6 +2050,7 @@ def create_main_window():
                     speed_test_timer.timeout.connect(update_speed_display)
                 speed_test_timer.start(500)
                 update_speed_display()
+                show_custom_notification("🔴 网络测试已开始", icon=DEFAULT_ICON_PATH)
             else:
                 network_speed_button.setStyleSheet(original_english_btn_style)
 
@@ -1967,7 +2060,7 @@ def create_main_window():
                         widget.setEnabled(True)
                 clear_display(display_area)
                 appendLogWithEffect(display_area, "🔵 网络测试已停止\n")
-                show_custom_notification("🔵 网络测试已停止")
+                show_custom_notification("🔵 网络测试已停止", icon=DEFAULT_ICON_PATH)
                 if speed_test_timer is not None:
                     speed_test_timer.stop()
 
@@ -2034,7 +2127,8 @@ def create_main_window():
     display_area.setReadOnly(True)
     display_area.setStyleSheet(display_area_style)
 
-    # 按钮布局
+    # ****************** 修改：将底部按钮放入容器以便隐藏/显示 ******************
+    # 按钮布局（优化为紧凑排列，移除伸展空间）
     button_layout = QHBoxLayout()
     create_script_button = create_button("🌟 创建脚本", main_window,
                                          lambda: show_create_script_dialog(main_window, list_widget, display_area,
@@ -2045,6 +2139,7 @@ def create_main_window():
     update_log_button = create_button("📜 设备信息", main_window,
                                       lambda: information_div(display_area))
 
+    # 事件处理程序保持不变
     create_script_button.enterEvent = lambda event: update_status_bar("🌟 创建脚本")
     remove_selected_button.enterEvent = lambda event: update_status_bar("🗑️ 删除脚本")
     clear_button.enterEvent = lambda event: update_status_bar("🧹️ 清除日志")
@@ -2053,24 +2148,106 @@ def create_main_window():
     english_learn_button.enterEvent = lambda event: update_status_bar("💃 English_learn")
     night_mode_button.enterEvent = lambda event: update_status_bar("夜间/日间")
 
-    button_layout.addStretch()
+    # 添加按钮，无伸展空间以保持紧凑
     button_layout.addWidget(create_script_button)
     button_layout.addWidget(remove_selected_button)
     button_layout.addWidget(clear_button)
     button_layout.addWidget(update_log_button)
-    button_layout.addStretch()
 
-    # 分割器
+    # 设置间距和边距以优化紧凑度
+    button_layout.setSpacing(10)  # 按钮间间距（可根据需要调整为5-15像素）
+    button_layout.setContentsMargins(10, 5, 10, 5)  # 布局边距：左、上、右、下（最小化空白）
+
+    # 最小化容器，用于隐藏/显示（不创建新按钮，使用原有按钮）
+    button_container = QWidget()
+    button_container.setLayout(button_layout)
+
+    # 可选：设置容器尺寸策略以防止过度扩展
+    button_container.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)  # 固定尺寸策略，防止拉伸
+    # 如果需要进一步限制宽度，可添加：button_container.setMaximumWidth(600)  # 示例值，根据按钮总宽调整
+
+    # 分割器和布局添加（通过容器添加原有按钮）
     splitter = QSplitter(Qt.Horizontal)
     splitter.addWidget(left_widget)
     splitter.addWidget(display_area)
     main_layout.addWidget(splitter)
-    main_layout.addLayout(button_layout)
+    main_layout.addWidget(button_container)  # 通过容器添加原有按钮
 
     splitter.setSizes([main_window.width() // 6, main_window.width() * 3 // 6])
 
-    # 将状态栏容器添加到主布局的底部
+    # 状态容器添加保持不变
     main_layout.addWidget(status_container)
+
+    # ****************** 新增：折叠/展开侧边栏逻辑 ******************
+    main_window.is_simplified = False
+    main_window.original_size = main_window.size()
+    main_window.original_splitter_sizes = splitter.sizes()
+
+    def toggle_side_panel():
+        """
+        通过平滑调整窗口大小，实现侧边面板的收缩或展开，同时隐藏/显示显示区域和原有底部按钮。
+        """
+        status_bar.setText("折叠")
+        if not hasattr(main_window, 'is_simplified'):
+            main_window.is_simplified = False
+
+
+        if main_window.is_simplified:
+            # 展开：恢复原始大小并显示元素
+            display_area.show()
+            button_container.show()  # 显示原有按钮在其原始位置
+            title_label.setText(original_title_text)  # 恢复完整文本
+            # 大小恢复动画
+
+            animation = QPropertyAnimation(main_window, b"size", main_window)
+            animation.setDuration(300)
+            animation.setStartValue(main_window.size())
+            animation.setEndValue(main_window.original_size)
+            animation.setEasingCurve(QEasingCurve.InOutQuad)
+            animation.finished.connect(lambda: splitter.setSizes(main_window.original_splitter_sizes))
+            animation.start(QPropertyAnimation.DeleteWhenStopped)
+
+            toggle_button.setText("﹤")
+            toggle_button.setToolTip("折叠右侧面板")
+            main_window.is_simplified = False
+            status_bar.show()
+            night_mode_button.show()
+            english_learn_button.show()
+            network_speed_button.show()
+        else:
+            # 收缩：保存状态并隐藏元素
+            main_window.original_size = main_window.size()
+            main_window.original_splitter_sizes = splitter.sizes()
+
+            display_area.hide()
+            button_container.hide()  # 隐藏原有按钮，而不重新创建
+            title_label.setText(tr('Xing_yun V-1.0'))
+            # 计算收缩后的宽度
+            new_width = main_window.original_splitter_sizes[0] - 300
+
+            # 大小收缩动画
+            animation = QPropertyAnimation(main_window, b"size", main_window)
+            animation.setDuration(300)
+            animation.setStartValue(main_window.size())
+            animation.setEndValue(QSize(new_width, main_window.height()))
+            animation.setEasingCurve(QEasingCurve.InOutQuad)
+            animation.start(QPropertyAnimation.DeleteWhenStopped)
+
+            toggle_button.setText("﹥")
+            toggle_button.setToolTip("展开右侧面板")
+            status_bar.hide()
+            night_mode_button.hide()
+            english_learn_button.hide()
+            network_speed_button.hide()
+
+            main_window.is_simplified = True
+
+
+    toggle_button.clicked.connect(toggle_side_panel)
+    # ****************** 新增代码结束 ******************
+
+
+
 
     # 加载脚本
     scripts = load_scripts()
@@ -2097,6 +2274,7 @@ def create_main_window():
                 if os.path.exists(icon_path):
                     item.setIcon(QIcon(icon_path))
                     print(f"已加载缓存图标: '{script_name}'.")
+                    status_bar.setText(f"本设备缓存图标路径:{icon_path}")
                     icon_set = True
                 else:
                     # 【核心修改】
@@ -2458,7 +2636,7 @@ def save_list_order():
 
     appendLogWithEffect(display_area, "🔄脚本顺序已更新！\n")
     save_current_scripts()
-    show_custom_notification("🔄脚本顺序已更新")
+    show_custom_notification("🔄脚本顺序已更新", icon=DEFAULT_ICON_PATH)
 
 
 def create_button(text, parent, callback):
@@ -2502,7 +2680,7 @@ def execute_script(item, display_area):
 
         if script_type == 'merge':
             appendLogWithEffect(display_area, f"合并脚本 '{item.text()}' 执行完成\n")
-            show_custom_notification("合并脚本完成", icon=default_icon)
+            show_custom_notification("合并脚本完成", icon=DEFAULT_ICON_PATH)
 
             # 静默执行所有子脚本
             for sub_script in script_value:
@@ -2598,7 +2776,7 @@ def remove_script(list_widget, display_area, completer_model):
                 completer_model.setStringList(completer_items)
                 save_current_scripts()
                 appendLogWithEffect(display_area, f"脚本 '{script_name}' 已删除！\n")
-                show_custom_notification("脚本已删除❌")
+                show_custom_notification(f"   {script_name}   脚本已删除", icon=DEFAULT_ICON_PATH)
         else:
             custom_message_box_style = """
                 QMessageBox {
@@ -2686,6 +2864,8 @@ def information_div(display_area):
 
         # 将日志信息和电脑基本信息一起添加到显示区域
         appendLogWithEffect(display_area, log_content)
+        show_custom_notification(message="获取设备信息", icon=DEFAULT_ICON_PATH)
+
 
     except Exception as e:
         # 如果出现异常，记录错误信息
@@ -2735,7 +2915,7 @@ def display_welcome_screen(display_area):
 
     location_info = get_city_and_region()
 
-    show_custom_notification(f"💖欢迎回来 {location_info} 的朋友")
+    show_custom_notification(message=f"💖欢迎回来 {location_info} 的朋友", icon=DEFAULT_ICON_PATH)
 
     appendLogWithEffect(display_area, welcome_message, include_timestamp=False)
 
@@ -2756,22 +2936,27 @@ def get_user_input_file(parent):
             border-radius: 12px;
             border: 1px solid #D0D0D0;
             font-family: 'Microsoft YaHei', Arial, sans-serif;
+            
         }
         QLabel {
-            font-size: 14px;
+            font-size: 20px;
             color: #333333;
             padding: 4px;
             min-width: 70px;
+            margin-top: 60px; /* 这里的20px可以根据你的需要调整 */
+            font-family: 'Comic Sans MS', 'KaiTi', sans-serif;
         }
         QLineEdit {
-            border: 1px solid #BBBBBB;
-            border-radius: 8px;
-            padding: 8px 12px;
-            font-size: 14px;
+            border: 0px solid #BBBBBB;
+            border-radius: 0px;
+            padding: 0px 0px;
+            font-size: 0px;
             background-color: #FFFFFF;
-            min-height: 36px;
+            max-height: 1px;
+            max-width:  1px;
             selection-background-color: #A0A0A0;
             box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05);
+            margin-top: 0px; /* 这里的20px可以根据你的需要调整 */
         }
         QLineEdit:focus {
             border: 1px solid #BBBBBB;  /* 与主窗口灰色风格一致 */
@@ -2784,7 +2969,7 @@ def get_user_input_file(parent):
             border: 1px solid #BBBBBB;
             border-radius: 8px;
             color: #000000;
-            font-size: 14px;
+            font-size: 18px;
             font-weight: bold;
             padding: 10px 20px;
             min-width: 100px;
@@ -2809,12 +2994,13 @@ def get_user_input_file(parent):
                                             stop:0 rgba(200, 200, 200, 1),
                                             stop:1 rgba(170, 170, 170, 1));
             border: 1px solid #BBBBBB;
-            border-radius: 6px;
+            border-radius: 8px;
             font-size: 16px;
             font-weight: bold;
-            min-width: 40px;
-            min-height: 36px;
+            min-width: 220px;
+            min-height: 55px;
             padding-bottom: 2px;
+            margin-top: 60px; /* 这里的20px可以根据你的需要调整 */
         }
         QToolButton:hover {
             background-color: qlineargradient(spread:pad, x1:0, y1:0, x2:1, y2:0,
@@ -2841,9 +3027,9 @@ def get_user_input_file(parent):
     name_layout.setContentsMargins(0, 0, 0, 0)
     name_layout.setSpacing(10)
 
-    name_label = QLabel("脚本名称:")
+    name_label = QLabel("选择exe文件:")
     name_edit = QLineEdit()
-    name_edit.setPlaceholderText("例如: Photoshop")
+    name_edit.setPlaceholderText("")
     browse_button = QToolButton()
     browse_button.setText("📂")
     browse_button.setToolTip("选择文件")
@@ -3008,6 +3194,7 @@ def get_user_input_url(parent):
     """获取用户输入的网址和脚本名称（与主窗口风格一致）"""
     dialog = QDialog(parent)
     dialog.setWindowFlags(dialog.windowFlags() & ~Qt.WindowContextHelpButtonHint)
+    dialog.setWindowIcon(QIcon(DEFAULT_ICON_PATH))
     dialog.setWindowTitle("创建网页脚本")
     dialog.setFixedSize(420, 300)
     dialog.setStyleSheet("""
@@ -3157,6 +3344,7 @@ class RenameScriptDialog(QDialog):
         super().__init__(parent)
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
         self.setWindowTitle(tr("重命名脚本"))
+        self.setWindowIcon(QIcon(DEFAULT_ICON_PATH))
         self.setStyleSheet("""
                             QDialog {
                                 background-color: #F5F7FA;
@@ -3208,11 +3396,6 @@ class RenameScriptDialog(QDialog):
         self.setFixedSize(400, 200)
         self.old_name = old_name
         self.init_ui()
-
-        # 设置窗口图标
-        icon_path = get_resource_path('imge.png')
-        if os.path.exists(icon_path):
-            self.setWindowIcon(QIcon(icon_path))
 
     def init_ui(self):
         layout = QVBoxLayout(self)
@@ -3300,6 +3483,7 @@ class ModifyPathDialog(QDialog):
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
         self.script_type = script_type
         self.current_path = current_path
+        self.setWindowIcon(QIcon(DEFAULT_ICON_PATH))
         self.setWindowTitle(tr("修改路径") if script_type == 'file' else tr("修改网址"))
         self.setStyleSheet("""
                             QDialog {
@@ -3580,8 +3764,9 @@ def setup_context_menu(list_widget, display_area, completer_model):
 
                     # **关键修复：保存修改后的脚本列表到文件**
                     save_scripts_to_file(list_widget)
+                    save_current_scripts()
                     appendLogWithEffect(display_area, f"脚本 '{old_name}' 已重命名为 '{new_name}'\n")
-                    show_custom_notification("脚本重命名成功")
+                    show_custom_notification(f"脚本 '{old_name}' 已重命名为 '{new_name}'")
                     QMessageBox.information(None, tr("成功"), tr("脚本名称已更新"))
                 else:
                     QMessageBox.warning(None, tr("错误"), tr("无法找到脚本数据"))
@@ -3644,7 +3829,7 @@ def reload_icon_from_context(item, display_area):
     # 重置为默认图标，防止加载旧图标
     item.setIcon(QIcon(DEFAULT_ICON_PATH))
     appendLogWithEffect(display_area, f"正在重新加载 '{script_name}' 的图标...\n")
-    show_custom_notification(f"正在重新加载")
+    show_custom_notification(f"正在重新加载", icon=DEFAULT_ICON_PATH)
     # URL脚本：从网络重新获取图标
     if script_type == 'url':
         # 删除旧的缓存文件
@@ -4202,7 +4387,7 @@ class CreateScriptDialog(QDialog):
         super(CreateScriptDialog, self).__init__(parent)
         # 移除问号按钮
         self.setWindowFlags(self.windowFlags() & ~Qt.WindowContextHelpButtonHint)
-
+        self.setWindowIcon(QIcon(DEFAULT_ICON_PATH))
         self.setWindowTitle("创建脚本")
         self.setFixedSize(420, 300)
         # 显式设置日间模式样式，防止继承夜间模式
@@ -4295,7 +4480,7 @@ class CreateScriptDialog(QDialog):
                 self.completer_model.setData(self.completer_model.index(0), name)
                 save_current_scripts()
                 appendLogWithEffect(self.display_area, f"创建网页脚本🌐 '{name}' 成功！\n")
-                show_custom_notification("创建网页脚本🌐")
+                show_custom_notification(f"创建网页脚本🌐 '{name}' 成功！", icon=DEFAULT_ICON_PATH)
                 # 异步加载实际图标
                 row = self.list_widget.count() - 1
                 get_website_favicon(url, lambda icon: self.list_widget.item(row).setIcon(icon))
@@ -4315,7 +4500,7 @@ class CreateScriptDialog(QDialog):
                 self.completer_model.setData(self.completer_model.index(0), name)
                 save_current_scripts()
                 appendLogWithEffect(self.display_area, f"创建软件脚本🖥️ '{name}' 成功！\n")
-                show_custom_notification(f"创建软件脚本🖥️")
+                show_custom_notification(f"创建软件脚本🖥️ '{name}' 成功！", icon=DEFAULT_ICON_PATH)
                 # 异步加载实际图标
                 row = self.list_widget.count() - 1
                 get_file_icon(file_path, lambda icon: self.list_widget.item(row).setIcon(icon))

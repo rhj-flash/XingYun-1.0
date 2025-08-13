@@ -4,12 +4,13 @@ from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import QTimer, QEasingCurve, QPoint
 from PyQt5.QtGui import QIcon
 from datetime import datetime
+
+
 # 导入具体的通知窗口类，这是单向依赖
 from notification import WelcomeNotification
 
 # 创建一个全局的通知管理器实例，确保它在整个应用生命周期中只被创建一次
 notification_manager = None
-
 
 def get_notification_manager():
     """
@@ -30,7 +31,7 @@ def show_greeting_notification(icon=None):
     """
     # 获取问候语和模式
     current_hour = datetime.now().hour
-    is_night_mode = not (6 <= current_hour < 18)
+    is_night_mode = not (8 <= current_hour < 20)
 
     greeting = NotificationManager.get_greeting()
     full_message = f"{greeting}"
@@ -60,7 +61,7 @@ def show_custom_notification(message: str, display_duration: int = 5000, icon=No
 
     # 根据当前时间自动确定日夜模式
     current_hour = datetime.now().hour
-    is_night_mode = not (6 <= current_hour < 18)
+    is_night_mode = not (8 <= current_hour < 20)
 
     # 检查传入的icon参数，如果是一个文件路径字符串，则创建 QIcon 对象
     if isinstance(icon, str):
@@ -100,7 +101,7 @@ class NotificationManager:
         desktop = QApplication.desktop()
         desktop_rect = desktop.availableGeometry()
 
-        # 硬性限制通知数量最多为5个
+        # 硬性限制通知数量最多为2个
         max_notifications = 2
         if len(self.active_notifications) >= max_notifications:
             oldest_notification = self.active_notifications.pop(0)
@@ -146,7 +147,7 @@ class NotificationManager:
             print(
                 f"[{datetime.now().strftime('%H:%M:%S')}] 通知已关闭，当前剩余 {len(self.active_notifications)} 个活跃通知。")
             if not self._reposition_timer.isActive():
-                self._reposition_timer.start(50)  # 延迟50毫秒重新定位，让所有关闭事件都能被处理
+                self._reposition_timer.start(20)  # 延迟50毫秒重新定位，让所有关闭事件都能被处理
         except ValueError:
             pass
 
@@ -188,7 +189,7 @@ class NotificationManager:
         并添加日间或夜间模式的提示。
         """
         current_hour = datetime.now().hour
-        mode_hint = " 已为您启用日间模式 " if 6 <= current_hour < 18 else " 已为您启用夜间模式 "
+        mode_hint = " 已为您启用日间模式 " if 6 <= current_hour < 18 else " 已到晚间点为您启用夜间模式 "
 
         if 23 <= current_hour or current_hour < 1:
             greeting_text = "夜深了，已是子时，请注意休息！"

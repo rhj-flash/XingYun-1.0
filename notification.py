@@ -2,10 +2,10 @@
 import datetime
 import sys
 from PyQt5.QtWidgets import QWidget, QLabel, QGraphicsOpacityEffect, QHBoxLayout, QApplication
-from PyQt5.QtCore import Qt, QPropertyAnimation, QRect, QTimer, QEasingCurve, QPoint, pyqtSignal
-from PyQt5.QtGui import QColor, QFont, QPalette, QIcon, QPixmap
+from PyQt5.QtCore import Qt, QPropertyAnimation, QRect, QTimer, QEasingCurve, QPoint, pyqtSignal, QRectF
+from PyQt5.QtGui import QColor, QFont, QPalette, QIcon, QPixmap, QPainter, QPainterPath
 
-# 移除对 notification_manager 的导入
+
 
 class WelcomeNotification(QWidget):
     """
@@ -33,7 +33,6 @@ class WelcomeNotification(QWidget):
         )
         self.setAttribute(Qt.WA_TranslucentBackground, True)
 
-
         self.message = message
         self.icon = icon
         self.animation_duration = 500
@@ -43,12 +42,17 @@ class WelcomeNotification(QWidget):
         self.layout.setContentsMargins(15, 15, 15, 15)
         self.layout.setSpacing(10)
 
+        # --- 【核心修改】在这里调用新的圆角处理方法 ---
         self.icon_label = QLabel(self)
-        if icon and not icon.isNull():
-            pixmap = icon.pixmap(64, 64)
-            self.icon_label.setPixmap(pixmap)
-        self.icon_label.setFixedSize(64, 64)
+        if self.icon and not self.icon.isNull():
+            pixmap = self.icon.pixmap(48, 48)
+            # 调用辅助函数创建带圆角的pixmap
+            rounded_pixmap = self._create_rounded_pixmap(pixmap, 48, 9)  # 48x48尺寸，12px圆角
+            self.icon_label.setPixmap(rounded_pixmap)
+
+        self.icon_label.setFixedSize(48, 48)
         self.icon_label.setAlignment(Qt.AlignCenter)
+        # --- 修改结束 ---
 
         self.text_label = QLabel(self.message, self)
         self.text_label.setFont(QFont('Comic Sans MS', 14, QFont.Bold))
@@ -69,6 +73,47 @@ class WelcomeNotification(QWidget):
         self.pos_animation = QPropertyAnimation(self, b"pos")
         self.opacity_animation = QPropertyAnimation(self.opacity_effect, b"opacity")
 
+    # --- 【核心修改】新增一个私有方法来处理图片圆角 ---
+    def _create_rounded_pixmap(self, source_pixmap: QPixmap, size: int, radius: int) -> QPixmap:
+        """
+        创建一个带有圆角的Pixmap副本。
+
+        Args:
+            source_pixmap (QPixmap): 原始的Pixmap图像。
+            size (int): 目标尺寸（宽度和高度）。
+            radius (int): 圆角半径。
+
+        Returns:
+            QPixmap: 处理后带有圆角的Pixmap。
+        """
+        if source_pixmap.isNull():
+            return QPixmap()
+
+        # 确保源图像尺寸正确，并保持高质量缩放
+        source_pixmap = source_pixmap.scaled(size, size, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+
+        # 创建一个透明的画布
+        rounded = QPixmap(source_pixmap.size())
+        rounded.fill(Qt.transparent)
+
+        # 使用QPainter在画布上绘制圆角图像
+        painter = QPainter(rounded)
+        painter.setRenderHint(QPainter.Antialiasing)  # 开启抗锯齿
+
+        # 创建一个圆角矩形路径
+        path = QPainterPath()
+        path.addRoundedRect(QRectF(rounded.rect()), radius, radius)
+
+        # 将路径设置为裁剪区域
+        painter.setClipPath(path)
+
+        # 在裁剪区域内绘制原始图像
+        painter.drawPixmap(0, 0, source_pixmap)
+        painter.end()
+
+        return rounded
+    # --- 新增方法结束 ---
+
     def set_notification_message(self, message: str, icon=None):
         """
         设置通知窗口的显示文本和图标。
@@ -79,11 +124,15 @@ class WelcomeNotification(QWidget):
         """
         self.message = message
         self.text_label.setText(message)
+
+        # --- 【核心修改】在这里也调用圆角处理 ---
         if icon and not icon.isNull():
-            pixmap = icon.pixmap(32, 32)
-            self.icon_label.setPixmap(pixmap)
+            pixmap = icon.pixmap(48, 48)  # 统一尺寸为48x48
+            rounded_pixmap = self._create_rounded_pixmap(pixmap, 48, 9)
+            self.icon_label.setPixmap(rounded_pixmap)
         else:
             self.icon_label.clear()
+        # --- 修改结束 ---
 
     def _apply_style(self, is_night_mode):
         """
@@ -93,8 +142,7 @@ class WelcomeNotification(QWidget):
             self.text_label.setStyleSheet("""
                 QLabel {
                     border: 0px solid #555555;
-                    border-radius: 30px;
-                    /* 修改渐变颜色，实现两边黑中间白的效果 */
+                    border-radius: 19px;
                     background-color: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
                                                     stop: 0 #000000, stop: 0.2 #EDF1F7, stop: 0.8 #EDF1F7, stop: 1 #000000);
                     font-family: 'Comic Sans MS', 'KaiTi', sans-serif;
@@ -102,19 +150,15 @@ class WelcomeNotification(QWidget):
                     font-weight: bold;
                     color: #000000;
                     padding: 10px;
+                    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3); /* 添加边缘阴影 */
                 }
             """)
-            self.icon_label.setStyleSheet("""
-                QLabel {
-                    background-color: transparent;
-                }
-            """)
+            self.icon_label.setStyleSheet("background-color: transparent;")
         else:
             self.text_label.setStyleSheet("""
                 QLabel {
                     border: 0px solid #CCCCCC;
-                    border-radius: 30px;
-                    /* 修改渐变颜色，实现两边黑中间白的效果 */
+                    border-radius: 19px;
                     background-color: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0,
                                                     stop: 0 #000000, stop: 0.2 #EDF1F7, stop: 0.8 #EDF1F7, stop: 1 #000000);
                     font-family: 'Comic Sans MS', 'KaiTi', sans-serif;
@@ -122,19 +166,16 @@ class WelcomeNotification(QWidget):
                     font-weight: bold;
                     color: #000000;
                     padding: 10px;
+                    box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.3); /* 添加边缘阴影 */
                 }
             """)
-            self.icon_label.setStyleSheet("""
-                QLabel {
-                    background-color: transparent;
-                }
-            """)
+            self.icon_label.setStyleSheet("background-color: transparent;")
 
     def update_hide_timer(self, duration: int):
         """
         动态更新通知的隐藏计时器。如果计时器正在运行，则停止并用新的时长重新启动。
         """
-        if self.hide_timer.isActive():
+        if hasattr(self, 'hide_timer') and self.hide_timer.isActive():
             self.hide_timer.stop()
         self.hide_timer.start(duration)
 
@@ -148,8 +189,7 @@ class WelcomeNotification(QWidget):
         self.show()
 
         desktop = QApplication.desktop()
-        desktop_rect = desktop.availableGeometry(
-            desktop.screenNumber(self.parent_widget)) if self.parent_widget else desktop.availableGeometry()
+        desktop_rect = desktop.availableGeometry(self.parent_widget) if self.parent_widget else desktop.availableGeometry()
 
         end_x = desktop_rect.x() + desktop_rect.width() - self.width() - 20
         start_x = desktop_rect.x() + desktop_rect.width()
@@ -177,13 +217,12 @@ class WelcomeNotification(QWidget):
         """
         执行通知窗口的隐藏动画，包括淡出和滑出。
         """
-        if self.hide_timer.isActive():
+        if hasattr(self, 'hide_timer') and self.hide_timer.isActive():
             self.hide_timer.stop()
 
         start_pos = self.pos()
         desktop = QApplication.desktop()
-        desktop_rect = desktop.availableGeometry(
-            desktop.screenNumber(self.parent_widget)) if self.parent_widget else desktop.availableGeometry()
+        desktop_rect = desktop.availableGeometry(self.parent_widget) if self.parent_widget else desktop.availableGeometry()
 
         end_x = desktop_rect.x() + desktop_rect.width()
         end_y = self.y()
