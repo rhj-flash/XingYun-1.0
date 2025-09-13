@@ -95,7 +95,6 @@ scrollbar_style_night = """
         background: transparent !important;  /* 确保滑轨透明 */
     }
 """
-
 # 日间模式样式
 display_area_style = """
     QTextEdit {
@@ -1332,6 +1331,7 @@ def create_main_window():
     """)
     center_window(main_window)
     main_layout = QVBoxLayout()
+    main_layout.setContentsMargins(0, 0, 10, 0)
     main_window.setLayout(main_layout)
 
     # 设置倒圆角
@@ -1368,8 +1368,6 @@ def create_main_window():
     title_bar_layout.addWidget(title_label)
     title_bar_layout.addStretch()
 
-
-
     # ****************** 新增 GitHub 按钮代码 ******************
     # 定义打开 GitHub 链接的函数
     def open_github_link():
@@ -1404,7 +1402,7 @@ def create_main_window():
     toggle_button.setFixedSize(25, 25)
     toggle_button.setToolTip("折叠/展开右侧面板")
     toggle_button.setStyleSheet("""
-            QPushButton { font-size: 28px; padding: 0px; text-align: center; }
+            QPushButton { font-size: 20px; padding: 0px; text-align: center; }
         """)
     title_bar_layout.addWidget(toggle_button)
     # ****************** 新增代码结束 ******************
@@ -1549,7 +1547,6 @@ def create_main_window():
         main_window.drag_position = None
         main_window.setCursor(Qt.ArrowCursor)
         QWidget.mouseReleaseEvent(main_window, event)
-
 
     def showEvent(event):
         """在主窗口完全显示后，启动欢迎通知的动画。"""
@@ -2148,23 +2145,27 @@ def create_main_window():
     english_learn_button.enterEvent = lambda event: update_status_bar("💃 English_learn")
     night_mode_button.enterEvent = lambda event: update_status_bar("夜间/日间")
 
-    # 添加按钮，无伸展空间以保持紧凑
+    # 使用 addStretch() 来均匀分布按钮
+    button_layout.addStretch(1)
     button_layout.addWidget(create_script_button)
+    button_layout.addStretch(1)
     button_layout.addWidget(remove_selected_button)
+    button_layout.addStretch(1)
     button_layout.addWidget(clear_button)
+    button_layout.addStretch(1)
     button_layout.addWidget(update_log_button)
+    button_layout.addStretch(1)
 
-    # 设置间距和边距以优化紧凑度
-    button_layout.setSpacing(10)  # 按钮间间距（可根据需要调整为5-15像素）
-    button_layout.setContentsMargins(10, 5, 10, 5)  # 布局边距：左、上、右、下（最小化空白）
+    # 设置间距为0，因为 addStretch 已经提供了间距
+    button_layout.setSpacing(0)
+    button_layout.setContentsMargins(10, 5, 10, 5)
 
-    # 最小化容器，用于隐藏/显示（不创建新按钮，使用原有按钮）
+    # 容器，用于隐藏/显示
     button_container = QWidget()
     button_container.setLayout(button_layout)
 
-    # 可选：设置容器尺寸策略以防止过度扩展
-    button_container.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)  # 固定尺寸策略，防止拉伸
-    # 如果需要进一步限制宽度，可添加：button_container.setMaximumWidth(600)  # 示例值，根据按钮总宽调整
+    # 确保容器的尺寸策略不是固定的，以便布局可以拉伸
+    button_container.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
     # 分割器和布局添加（通过容器添加原有按钮）
     splitter = QSplitter(Qt.Horizontal)
@@ -2190,7 +2191,6 @@ def create_main_window():
         status_bar.setText("折叠")
         if not hasattr(main_window, 'is_simplified'):
             main_window.is_simplified = False
-
 
         if main_window.is_simplified:
             # 展开：恢复原始大小并显示元素
@@ -2242,12 +2242,8 @@ def create_main_window():
 
             main_window.is_simplified = True
 
-
     toggle_button.clicked.connect(toggle_side_panel)
     # ****************** 新增代码结束 ******************
-
-
-
 
     # 加载脚本
     scripts = load_scripts()
@@ -2899,14 +2895,14 @@ def display_welcome_screen(display_area):
             
 欢迎使用本软件！
     使用说明：
-    1. 创建软件脚本：创建一个打开软件的脚本,需要用户自定义脚本名称以及选择打开软件的绝对路径,双击使用.
-    2. 创建网页脚本：创建一个打开网页的脚本,需要用户键入网址和脚本名称(右键脚本可修改名称).
-    3. 拖拽脚本可以调整排序位置.
+    1. 创建软件脚本：创建打开软件的脚本,需要用户自定义脚本名称以及选择打开软件的绝对路径,双击使用.
+    2. 创建网页脚本：创建打开网页的脚本,需要用户键入网址和脚本名称(右键脚本可修改名称/地址/刷新icon).
+        网页脚本：🌐 Google | 🔗https://www.google.com.
+        软件脚本：🖥️ Photoshop | 📂C:/Program Files/Adobe/Photoshop.exe.
+    3. 拖拽脚本可以调整脚本排序位置.
     4. 设备信息：获取当前设备基础信息(部分功能需要开启管理员权限).
-    5. 网页脚本：🌐 Google | 🔗https://www.google.com.
-       软件脚本：🖥️ Photoshop | 📂C:/Program Files/Adobe/Photoshop.exe.
-    6. 🔴 英语查询模式下其它功能禁用 .
-    7.Github开源地址：|  https://github.com/rhj-flash/XingYun-1.0.
+    5. 🔴 英语查询模式下其它功能禁用 .
+    6.Github开源地址：|  https://github.com/rhj-flash/XingYun-1.0.
 使用愉快！
                                                                             Rhj_flash
 —————————————————————————————————————————————————————————————————————————————————————————

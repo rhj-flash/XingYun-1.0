@@ -572,7 +572,7 @@ def generateDivider(text_edit):
     font_metrics = QFontMetricsF(text_edit.font())  # 使用浮点精度计算字体宽度
     char_width = font_metrics.horizontalAdvance("〰")  # 计算"▓▒░"的像素宽度
     width = int(usable_width / char_width)  # 计算整行可以放多少个"▓▒░"
-    divider = "〰" * max(1, width - 1)  # 确保最少 1 个
+    divider = "〰" * max(1, width - 3)  # 确保最少 1 个
     return divider
 
 
@@ -1021,7 +1021,7 @@ def get_city_and_region():
     """
     try:
         # 通过ip-api.com获取地理位置信息
-        response = requests.get('http://ip-api.com/json/?lang=zh-CN', timeout=5)
+        response = requests.get('http://ip-api.com/json/?lang=zh-CN', timeout=3)
         response.raise_for_status()  # 检查请求是否成功
 
         location_data = response.json()
@@ -1029,7 +1029,7 @@ def get_city_and_region():
         if location_data.get('status') == 'success':
             city = location_data.get('city', '未知城市')
             region = location_data.get('regionName', '未知地区')
-            return f"{region}{city}"
+            return f"ip{region}"
         else:
             log_message(f"通过IP查询地理位置失败: {location_data.get('message', '未知错误')}")
             return "素未谋面"

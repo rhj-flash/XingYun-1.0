@@ -16,7 +16,7 @@ IMPORTANT: Do NOT post this list to the issue-tracker. Use it as a basis for
 
 missing module named 'org.python' - imported by copy (optional), xml.sax (delayed, conditional)
 missing module named grp - imported by shutil (optional), tarfile (optional), pathlib (delayed, optional), subprocess (optional)
-missing module named pwd - imported by posixpath (delayed, conditional), shutil (optional), tarfile (optional), pathlib (delayed, conditional, optional), subprocess (optional), netrc (delayed, conditional), getpass (delayed), psutil (optional), webbrowser (delayed)
+missing module named pwd - imported by shutil (optional), tarfile (optional), pathlib (delayed, conditional, optional), subprocess (optional), posixpath (delayed, conditional), netrc (delayed, conditional), getpass (delayed), psutil (optional), webbrowser (delayed)
 missing module named pep517 - imported by importlib.metadata (delayed)
 missing module named _scproxy - imported by urllib.request (conditional)
 missing module named termios - imported by getpass (optional)

@@ -25,14 +25,19 @@
         "value": "https://gemini.google.com"
     },
     {
+        "name": "chat_gpt",
+        "type": "url",
+        "value": "https://chatgpt.com/"
+    },
+    {
         "name": "全栈课程1",
         "type": "url",
         "value": "https://www.bilibili.com/video/BV1nV4y1s7ZN?spm_id_from=333.788.videopod.episodes&vd_source=6be55cf96cb2a0cd178874467cc26ab1&p=10"
     },
     {
-        "name": "chat_gpt",
+        "name": "学英语",
         "type": "url",
-        "value": "https://chatgpt.com/"
+        "value": "https://julebu.co/my-course-packs"
     },
     {
         "name": "Le Chat - Mistral AI  (VPN节点开伦敦)",
@@ -48,11 +53,6 @@
         "name": "deep_seek",
         "type": "url",
         "value": "https://chat.deepseek.com/"
-    },
-    {
-        "name": "单词学习",
-        "type": "url",
-        "value": "https://qwerty.kaiyi.cool"
     },
     {
         "name": "Google",
@@ -115,18 +115,23 @@
         "value": "https://www.processon.com/diagrams"
     },
     {
-        "name": "1",
+        "name": "书籍PDF/教材",
         "type": "url",
-        "value": "https://1"
+        "value": "https://zh.z-library.sk/"
     },
     {
-        "name": "q",
+        "name": "图片/证件照编辑",
         "type": "url",
-        "value": "https://q"
+        "value": "https://photokit.com/?lang=zh"
     },
     {
-        "name": "1",
+        "name": "大理大学文献数据库/图书馆",
         "type": "url",
-        "value": "https://1"
+        "value": "http://web.lib.dali.edu.cn/list-33-1.html"
+    },
+    {
+        "name": "Zotero中文插件网址",
+        "type": "url",
+        "value": "https://zotero-chinese.com/"
     }
 ]
