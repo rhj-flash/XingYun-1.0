@@ -5,16 +5,6 @@
         "value": "D:/VPN/v2rayN-With-Core/v2rayN.exe"
     },
     {
-        "name": "Grok",
-        "type": "url",
-        "value": "https://grok.com/chat/"
-    },
-    {
-        "name": "Runoob",
-        "type": "url",
-        "value": "https://www.runoob.com/"
-    },
-    {
         "name": "GitHub",
         "type": "url",
         "value": "https://github.com/"
@@ -25,19 +15,14 @@
         "value": "https://gemini.google.com"
     },
     {
-        "name": "chat_gpt",
+        "name": "Grok",
         "type": "url",
-        "value": "https://chatgpt.com/"
+        "value": "https://grok.com/chat/"
     },
     {
-        "name": "全栈课程1",
+        "name": "deep_seek",
         "type": "url",
-        "value": "https://www.bilibili.com/video/BV1nV4y1s7ZN?spm_id_from=333.788.videopod.episodes&vd_source=6be55cf96cb2a0cd178874467cc26ab1&p=10"
-    },
-    {
-        "name": "学英语",
-        "type": "url",
-        "value": "https://julebu.co/my-course-packs"
+        "value": "https://chat.deepseek.com/"
     },
     {
         "name": "Le Chat - Mistral AI  (VPN节点开伦敦)",
@@ -45,14 +30,34 @@
         "value": "https://chat.mistral.ai/chat"
     },
     {
+        "name": "chat_gpt",
+        "type": "url",
+        "value": "https://chatgpt.com/"
+    },
+    {
+        "name": "Kimi/PPT制作",
+        "type": "url",
+        "value": "https://www.kimi.com/chat/d397b3ef2kq40vrrlkpg"
+    },
+    {
+        "name": "全栈课程1",
+        "type": "url",
+        "value": "https://www.bilibili.com/video/BV1nV4y1s7ZN?spm_id_from=333.788.videopod.episodes&vd_source=6be55cf96cb2a0cd178874467cc26ab1&p=10"
+    },
+    {
+        "name": "Runoob",
+        "type": "url",
+        "value": "https://www.runoob.com/"
+    },
+    {
+        "name": "学英语",
+        "type": "url",
+        "value": "https://julebu.co/my-course-packs"
+    },
+    {
         "name": "YouTube",
         "type": "url",
         "value": "https://www.youtube.com/"
-    },
-    {
-        "name": "deep_seek",
-        "type": "url",
-        "value": "https://chat.deepseek.com/"
     },
     {
         "name": "Google",
@@ -133,5 +138,10 @@
         "name": "Zotero中文插件网址",
         "type": "url",
         "value": "https://zotero-chinese.com/"
+    },
+    {
+        "name": "流程图_tool",
+        "type": "url",
+        "value": "https://mermaid.live/"
     }
 ]
