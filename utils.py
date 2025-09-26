@@ -37,7 +37,7 @@ CACHE_LOCK = threading.Lock()
 ICON_CACHE = {}
 
 # 线程池执行器，用于异步任务
-ICON_EXECUTOR = ThreadPoolExecutor(max_workers=5)
+ICON_EXECUTOR = ThreadPoolExecutor(max_workers=32)
 
 # --- 其他可能需要的通用工具函数 ---
 # 可以在此文件中添加其他通用工具函数，以便集中管理

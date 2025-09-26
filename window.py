@@ -1,8 +1,8 @@
-import hashlib
 import threading  # 确保导入 threading 模块
 import time
+import hashlib
 from urllib.parse import urlparse, urljoin
-
+from concurrent.futures import as_completed
 from PyQt5.QtCore import QEasingCurve, QParallelAnimationGroup, QFileInfo
 from PyQt5.QtCore import QRect
 from PyQt5.QtCore import QStringListModel, QTranslator, QCoreApplication, QPropertyAnimation, QPoint, QEvent, \
@@ -564,7 +564,7 @@ CACHE_LOCK = threading.Lock()
 # 图标缓存
 ICON_CACHE = {}
 # 线程池
-ICON_EXECUTOR = ThreadPoolExecutor(max_workers=50)
+ICON_EXECUTOR = ThreadPoolExecutor(max_workers=32)
 # 默认图标路径
 DEFAULT_ICON_PATH = get_resource_path("resources/imge.png")
 # 夜间模式标志
@@ -626,8 +626,7 @@ def extract_default_icon():
 def get_website_favicon(url, script_name, callback=None):
     """
     异步获取网站图标。
-    此函数会尝试多种方式获取网站图标（如从网站根目录、网页link标签、第三方服务等），
-    并支持缓存机制以提高后续加载速度。
+    此函数通过并行请求多种来源，并优先选择高质量（高像素）图标。
     它使用线程池异步执行，以防止UI阻塞。
 
     Args:
@@ -639,25 +638,27 @@ def get_website_favicon(url, script_name, callback=None):
         QIcon: 如果是异步调用则立即返回一个默认图标，否则返回获取到的图标。
     """
 
+    # 最小像素要求：宽度和高度都必须大于或等于此值才被认为是高质量图标
+    MIN_QUALITY_SIZE = 32
+
+    # 存储图标文件的内部函数
+    def get_cache_file():
+        # 为了兼容性，使用 url 作为 md5 源，确保缓存文件的唯一性
+        safe_name = hashlib.md5(url.encode('utf-8')).hexdigest()
+        cache_dir = get_resource_path("resources/icon_cache")  # 假设 get_resource_path 存在
+        os.makedirs(cache_dir, exist_ok=True)
+        return os.path.join(cache_dir, f"{safe_name}.png")
+
     def fetch_and_process_icon():
         """
         内部函数，在线程池中执行图标获取和处理。
-        整合了尝试从多个来源获取图标并选择最佳图标的逻辑。
         """
-        # 加锁以确保缓存访问的线程安全
-        with CACHE_LOCK:
-            if url in ICON_CACHE:
-                print(f"DEBUG: 从缓存中获取网站图标: {url}")
+        # 1. 尝试从内存缓存中获取 (最快)
+        with CACHE_LOCK:  # 假设 CACHE_LOCK 存在
+            if url in ICON_CACHE:  # 假设 ICON_CACHE 存在
                 return ICON_CACHE[url]
 
-        # 存储图标文件的内部函数
-        def get_cache_file():
-            cache_dir = get_resource_path("icon_cache")
-            os.makedirs(cache_dir, exist_ok=True)
-            safe_script_name = re.sub(r'[^\w\.-]', '_', script_name)
-            return os.path.join(cache_dir, f"{safe_script_name}.ico")
-
-        # 尝试从本地缓存加载
+        # 2. 尝试从磁盘缓存加载 (次快)
         cache_file = get_cache_file()
         if os.path.exists(cache_file):
             try:
@@ -666,125 +667,121 @@ def get_website_favicon(url, script_name, callback=None):
                     icon = QIcon(pixmap)
                     with CACHE_LOCK:
                         ICON_CACHE[url] = icon
-                    print(f"DEBUG: 从缓存加载图标: {cache_file}")
-                    status_bar.setText(f"DEBUG: 从缓存加载图标: {cache_file}")
                     return icon
             except Exception as e:
                 print(f"❌ 缓存文件读取失败: {e}")
 
-        # 如果缓存中没有，则尝试从多个来源获取
-        try:
-            parsed = urlparse(url)
-            base_url = f"{parsed.scheme}://{parsed.netloc}"
-            domain = parsed.netloc
-
-            icon_urls = [
-                f"{base_url}/favicon.ico",
-                f"{url.rstrip('/')}/favicon.ico",
-                f"https://www.google.com/s2/favicons?sz=64&domain_url={url}",
-                f"https://www.google.com/s2/favicons?domain={domain}",
-                f"https://favicongrabber.com/api/grabicon/{domain}",
-                f"https://api.faviconkit.com/{domain}/144",
-                f"https://icons.duckduckgo.com/ip2/{domain}.ico",
-                f"https://t3.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url={url}&size=128",
-                f"https://logo.clearbit.com/{domain}?size=128",
-                f"https://sites.google.com/site/gdocs2html/images/favicons/{domain}.ico",
-            ]
-
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-            }
-
-            # 尝试解析HTML获取更多图标链接
+        # 3. 定义获取任务，返回包含结果和来源的元组
+        def get_url_content(fetch_url, source_name):
             try:
-                response = requests.get(url, headers=headers, timeout=3)
-                if response.status_code == 200:
-                    soup = BeautifulSoup(response.text, 'html.parser')
-                    icon_links = []
-                    icon_links.extend(soup.find_all('link', rel=lambda x: x and 'icon' in x.lower()))
-                    icon_links.extend(soup.find_all('link', rel=lambda x: x and 'apple-touch-icon' in x.lower()))
-                    icon_links.extend(soup.find_all('meta', attrs={'name': 'msapplication-TileImage'}))
-                    icon_links.extend(soup.find_all('meta', attrs={'property': 'og:image'}))
-                    icon_links.extend(soup.find_all('meta', attrs={'name': 'twitter:image'}))
-                    for link in icon_links:
-                        href = link.get('href') if link.name == 'link' else link.get('content')
-                        if href:
-                            if not href.startswith(('http://', 'https://')):
-                                href = urljoin(url, href)
-                            icon_urls.append(href)
+                headers = {'User-Agent': 'Mozilla/5.0'}
+                # 设置更短的超时时间，加速失败时的回退
+                response = requests.get(fetch_url, headers=headers, timeout=1.5)
+                if response.status_code == 200 and 'image' in response.headers.get('Content-Type', '').lower():
+                    pixmap = QPixmap()
+                    if pixmap.loadFromData(response.content):
+                        # 尺寸过大过滤
+                        if pixmap.width() > 513 or pixmap.height() > 513:
+                            return (None, 0, 0, source_name)
+                        # 返回所有有效图标的信息
+                        return (response.content, pixmap.width(), pixmap.height(), source_name)
             except Exception:
                 pass
+            return (None, 0, 0, source_name)
 
-            # 收集所有成功的图标数据及其尺寸
-            successful_icons = []
-            for icon_url in icon_urls:
-                try:
-                    response = requests.get(icon_url, headers=headers, timeout=3, stream=True)
-                    if response.status_code == 200 and 'image' in response.headers.get('Content-Type', '').lower():
-                        content = response.content
-                        pixmap = QPixmap()
-                        if pixmap.loadFromData(content):
-                            width, height = pixmap.width(), pixmap.height()
+        # 4. 定义需要并行执行的任务列表
+        futures = []
+        domain = urlparse(url).netloc
 
-                            # 尺寸过大过滤
-                            if width > 513 or height > 513:
-                                print(f"调试: 来源 {icon_url} 跳过，尺寸太大 {width}x{height}")
-                                continue
+        # 定义所有可能的图标来源（并行提交）
+        icon_urls_to_check = [
+            f"{url.rstrip('/')}/favicon.ico",
+            f"https://www.google.com/s2/favicons?sz=64&domain_url={url}",
+            f"https://icons.duckduckgo.com/ip2/{domain}.ico",
+            f"https://api.faviconkit.com/{domain}/144",
+        ]
+        for fetch_url in icon_urls_to_check:
+            futures.append(ICON_EXECUTOR.submit(get_url_content, fetch_url, "direct_url"))
 
-                            print(f"调试: 来源 {icon_url} 获取到有效图标尺寸 {width}x{height}")
-                            status_bar.setText(f"图标加载icon_add: 来源 {icon_url} 获取到有效图标尺寸 {width}x{height}")
-                            successful_icons.append((content, width, height))
-                except Exception:
-                    continue
+        # 尝试解析HTML获取更多图标链接（作为并行任务）
+        def get_html_icons():
+            try:
+                headers = {'User-Agent': 'Mozilla/5.0'}
+                response = requests.get(url, headers=headers, timeout=1.5)
+                if response.status_code == 200:
+                    soup = BeautifulSoup(response.text, 'html.parser')
+                    # 查找高质量图标链接
+                    link = soup.find('link', rel=lambda x: x and 'icon' in x.lower() and (
+                                '32' in x or '64' in x or '128' in x or '192' in x or '256' in x))
+                    # 如果找不到特定尺寸，找第一个
+                    if not link:
+                        link = soup.find('link', rel=lambda x: x and 'icon' in x.lower())
 
-            if not successful_icons:
-                print("调试: 无任何有效图标来源（非图标或尺寸异常）")
-                # 所有尝试失败，返回默认图标
-                default_icon = QIcon(get_resource_path('imge.png'))
-                with CACHE_LOCK:
-                    ICON_CACHE[url] = default_icon
-                return default_icon
+                    if link and link.get('href'):
+                        href = urljoin(url, link.get('href'))
+                        return get_url_content(href, "html_link")
+            except Exception:
+                pass
+            return (None, 0, 0, "html_link_fail")
 
-            # ----------------- 整合后的图标选择逻辑 -----------------
-            # 1. 优先选择尺寸大于等于32x32的最大图标
-            large_icons = [i for i in successful_icons if i[1] >= 32 and i[2] >= 32]
-            if large_icons:
-                large_icons.sort(key=lambda x: x[1] * x[2], reverse=True)
-                selected_content = large_icons[0][0]
-                selected_size = f"{large_icons[0][1]}x{large_icons[0][2]}"
-                print(f"调试: 找到大于32的图标，选择最大有效图标尺寸 {selected_size}")
+        futures.append(ICON_EXECUTOR.submit(get_html_icons))
+
+        # 5. 等待所有并行任务完成并收集结果
+        successful_icons = []
+        for future in as_completed(futures):
+            try:
+                content, width, height, source_name = future.result()
+                if content and width > 0 and height > 0:
+                    successful_icons.append((content, width, height, source_name))
+            except Exception as e:
+                # 忽略取消的 Future 异常
+                if not future.cancelled():
+                    print(f"❌ 任务处理失败: {e}")
+                continue
+
+        # 6. 图标选择逻辑：优先选择高质量图标
+        selected_content = None
+        if successful_icons:
+            # 优先选择尺寸 >= 32x32 的最大图标 (高质量筛选)
+            high_quality_icons = [i for i in successful_icons if i[1] >= MIN_QUALITY_SIZE and i[2] >= MIN_QUALITY_SIZE]
+
+            if high_quality_icons:
+                # 选择高质量图标中最大的
+                high_quality_icons.sort(key=lambda x: x[1] * x[2], reverse=True)
+                selected_content = high_quality_icons[0][0]
+                selected_size = f"{high_quality_icons[0][1]}x{high_quality_icons[0][2]}"
+                print(f"✅ 找到高质量图标，选择最大有效图标尺寸 {selected_size}")
             else:
-                # 2. 如果没有大图标，则选择所有成功获取图标中的最大尺寸
+                # 如果没有高质量图标，则选择所有图标中尺寸最大的（避免没有图标可用）
                 successful_icons.sort(key=lambda x: x[1] * x[2], reverse=True)
                 selected_content = successful_icons[0][0]
                 selected_size = f"{successful_icons[0][1]}x{successful_icons[0][2]}"
-                print(f"调试: 未找到大于32的图标，选择所有图标中最大尺寸 {selected_size}")
+                print(f"⚠️ 未找到高质量图标，选择所有图标中最大尺寸 {selected_size}")
 
-            # 保存到本地缓存
-            with open(get_cache_file(), 'wb') as f:
-                f.write(selected_content)
-
+        # 7. 处理结果
+        if selected_content:
             pixmap = QPixmap()
             pixmap.loadFromData(selected_content)
             icon = QIcon(pixmap)
+
+            # 将图标保存到磁盘缓存
+            pixmap.save(get_cache_file(), "PNG")
+
             with CACHE_LOCK:
                 ICON_CACHE[url] = icon
             return icon
-
-        except Exception as e:
-            print(f"❌ 获取网站图标失败: {url}, 错误: {e}")
-            pass
-
-        # 所有尝试失败，返回默认图标
-        default_icon = QIcon(get_resource_path('imge.png'))
-        with CACHE_LOCK:
-            ICON_CACHE[url] = default_icon
-        return default_icon
+        else:
+            print("❌ 所有尝试均失败，返回默认图标。")
+            # 假设 DEFAULT_ICON_PATH 指向默认图标
+            default_icon = QIcon(get_resource_path('resources/imge.png'))
+            with CACHE_LOCK:
+                ICON_CACHE[url] = default_icon
+            return default_icon
 
     if callback:
         future = ICON_EXECUTOR.submit(fetch_and_process_icon)
         future.add_done_callback(lambda f: callback(f.result()))
-        return QIcon(get_resource_path('imge.png'))  # 立即返回默认图标
+        return QIcon(get_resource_path('resources/imge.png'))  # 立即返回默认图标
     else:
         return fetch_and_process_icon()
 

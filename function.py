@@ -43,7 +43,7 @@ DEFAULT_ICON_PATH = get_resource_path("resources/imge.png")
 CACHE = {}
 
 # 线程池
-ICON_EXECUTOR = ThreadPoolExecutor(max_workers=5)
+ICON_EXECUTOR = ThreadPoolExecutor(max_workers=32)
 
 # **提前加载字典文件**
 dictionary_path = get_resource_path('resources/english_words.txt')

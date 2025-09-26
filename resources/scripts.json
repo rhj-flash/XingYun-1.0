@@ -12,7 +12,7 @@
     {
         "name": "Gemini",
         "type": "url",
-        "value": "https://gemini.google.com"
+        "value": "https://gemini.google.com/"
     },
     {
         "name": "Grok",
@@ -70,19 +70,9 @@
         "value": "https://www.bilibili.com/"
     },
     {
-        "name": "雷神加速器",
-        "type": "file",
-        "value": "D:/雷神/LeiGod_Acc/leigod.exe"
-    },
-    {
         "name": "VPN_charge(VPN充值网址)",
         "type": "url",
         "value": "https://sakuran.org/"
-    },
-    {
-        "name": "微信",
-        "type": "file",
-        "value": "D:/wechat/WeChat.exe"
     },
     {
         "name": "看电影",
@@ -132,7 +122,7 @@
     {
         "name": "大理大学文献数据库/图书馆",
         "type": "url",
-        "value": "http://web.lib.dali.edu.cn/list-33-1.html"
+        "value": "http://web.lib.dali.edu.cn/list-33-1.html/"
     },
     {
         "name": "Zotero中文插件网址",
@@ -143,5 +133,10 @@
         "name": "流程图_tool",
         "type": "url",
         "value": "https://mermaid.live/"
+    },
+    {
+        "name": "JD",
+        "type": "url",
+        "value": "https://www.jd.com/?cu=true&utm_source=lianmeng__10__ntp.msn.cn&utm_medium=tuiguang&utm_campaign=t_2030767747_&utm_term=fb7693d9b2a44f788986144ecbc8fb38"
     }
 ]
