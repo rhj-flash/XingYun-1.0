@@ -5,6 +5,11 @@
         "value": "D:/VPN/v2rayN-With-Core/v2rayN.exe"
     },
     {
+        "name": "中国知网（链接校园网打开）",
+        "type": "url",
+        "value": "https://www.cnki.net"
+    },
+    {
         "name": "GitHub",
         "type": "url",
         "value": "https://github.com/"
@@ -72,7 +77,7 @@
     {
         "name": "VPN_charge(VPN充值网址)",
         "type": "url",
-        "value": "https://sakuran.org/"
+        "value": "https://sakuran.org"
     },
     {
         "name": "看电影",
@@ -122,7 +127,7 @@
     {
         "name": "大理大学文献数据库/图书馆",
         "type": "url",
-        "value": "http://web.lib.dali.edu.cn/list-33-1.html/"
+        "value": "http://web.lib.dali.edu.cn/list-33-1.html"
     },
     {
         "name": "Zotero中文插件网址",
