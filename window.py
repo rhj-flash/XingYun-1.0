@@ -4474,9 +4474,13 @@ class CreateScriptDialog(QDialog):
                 save_current_scripts()
                 appendLogWithEffect(self.display_area, f"创建网页脚本🌐 '{name}' 成功！\n")
                 show_custom_notification(f"创建网页脚本🌐 '{name}' 成功！", icon=DEFAULT_ICON_PATH)
-                # 异步加载实际图标
-                row = self.list_widget.count() - 1
-                get_website_favicon(url, lambda icon: self.list_widget.item(row).setIcon(icon))
+
+                # 【修改这里】异步加载实际图标 - 使用正确的回调函数
+                def set_web_icon(icon):
+                    item.setIcon(icon)  # 直接设置当前项的图标
+                    self.list_widget.update()  # 强制刷新显示
+
+                get_website_favicon(url, name, callback=set_web_icon)
                 self.close()
         except Exception as e:
             appendLogWithEffect(self.display_area, f"Error creating web script: {e}\n")
@@ -4494,9 +4498,13 @@ class CreateScriptDialog(QDialog):
                 save_current_scripts()
                 appendLogWithEffect(self.display_area, f"创建软件脚本🖥️ '{name}' 成功！\n")
                 show_custom_notification(f"创建软件脚本🖥️ '{name}' 成功！", icon=DEFAULT_ICON_PATH)
-                # 异步加载实际图标
-                row = self.list_widget.count() - 1
-                get_file_icon(file_path, lambda icon: self.list_widget.item(row).setIcon(icon))
+
+                # 【修改这里】异步加载实际图标 - 使用正确的回调函数
+                def set_file_icon(icon):
+                    item.setIcon(icon)  # 直接设置当前项的图标
+                    self.list_widget.update()  # 强制刷新显示
+
+                get_file_icon(file_path, callback=set_file_icon)
                 self.close()
         except Exception as e:
             appendLogWithEffect(self.display_area, f"Error creating software script: {e}\n")

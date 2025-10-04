@@ -1,146 +1,174 @@
 [
     {
         "name": "v2rayN",
+        "needs_icon_refresh": false,
         "type": "file",
         "value": "D:/VPN/v2rayN-With-Core/v2rayN.exe"
     },
     {
         "name": "中国知网（链接校园网打开）",
+        "needs_icon_refresh": true,
         "type": "url",
         "value": "https://www.cnki.net"
     },
     {
+        "name": "Gemini",
+        "needs_icon_refresh": true,
+        "type": "url",
+        "value": "https://gemini.google.com"
+    },
+    {
         "name": "GitHub",
+        "needs_icon_refresh": true,
         "type": "url",
         "value": "https://github.com/"
     },
     {
-        "name": "Gemini",
-        "type": "url",
-        "value": "https://gemini.google.com/"
-    },
-    {
         "name": "Grok",
+        "needs_icon_refresh": true,
         "type": "url",
         "value": "https://grok.com/chat/"
     },
     {
         "name": "deep_seek",
+        "needs_icon_refresh": true,
         "type": "url",
         "value": "https://chat.deepseek.com/"
     },
     {
         "name": "Le Chat - Mistral AI  (VPN节点开伦敦)",
+        "needs_icon_refresh": true,
         "type": "url",
         "value": "https://chat.mistral.ai/chat"
     },
     {
         "name": "chat_gpt",
+        "needs_icon_refresh": true,
         "type": "url",
         "value": "https://chatgpt.com/"
     },
     {
         "name": "Kimi/PPT制作",
+        "needs_icon_refresh": true,
         "type": "url",
         "value": "https://www.kimi.com/chat/d397b3ef2kq40vrrlkpg"
     },
     {
+        "name": "豆包",
+        "type": "url",
+        "value": "https://www.doubao.com/chat/?channel=microsoft&source=microsoft_db_14&type=daoh&theme=wangzjh"
+    },
+    {
         "name": "全栈课程1",
+        "needs_icon_refresh": true,
         "type": "url",
         "value": "https://www.bilibili.com/video/BV1nV4y1s7ZN?spm_id_from=333.788.videopod.episodes&vd_source=6be55cf96cb2a0cd178874467cc26ab1&p=10"
     },
     {
         "name": "Runoob",
+        "needs_icon_refresh": true,
         "type": "url",
         "value": "https://www.runoob.com/"
     },
     {
         "name": "学英语",
+        "needs_icon_refresh": true,
         "type": "url",
         "value": "https://julebu.co/my-course-packs"
     },
     {
         "name": "YouTube",
+        "needs_icon_refresh": true,
         "type": "url",
         "value": "https://www.youtube.com/"
     },
     {
         "name": "Google",
+        "needs_icon_refresh": true,
         "type": "url",
         "value": "https://www.google.com/"
     },
     {
         "name": "bilibili.com",
+        "needs_icon_refresh": true,
         "type": "url",
         "value": "https://www.bilibili.com/"
     },
     {
         "name": "VPN_charge(VPN充值网址)",
+        "needs_icon_refresh": true,
         "type": "url",
         "value": "https://sakuran.org"
     },
     {
         "name": "看电影",
+        "needs_icon_refresh": true,
         "type": "url",
         "value": "https://ixkw7.cc/play/102471/21.html"
     },
     {
         "name": "CSDN",
+        "needs_icon_refresh": true,
         "type": "url",
         "value": "https://blog.csdn.net/RHJflash?spm=1000.2115.3001.5343/"
     },
     {
         "name": "公式识别网站",
+        "needs_icon_refresh": true,
         "type": "url",
         "value": "https://simpletex.cn/ai/latex_ocr"
     },
     {
         "name": "Wikipedia（维基百科）",
+        "needs_icon_refresh": true,
         "type": "url",
         "value": "https://zh.wikipedia.org/"
     },
     {
         "name": "软件网站",
+        "needs_icon_refresh": true,
         "type": "url",
         "value": "https://www.rjsos.com/win"
     },
     {
         "name": "电影",
+        "needs_icon_refresh": true,
         "type": "url",
         "value": "https://www.chinatownfilm.com"
     },
     {
         "name": "绘制流程图",
+        "needs_icon_refresh": true,
         "type": "url",
         "value": "https://www.processon.com/diagrams"
     },
     {
         "name": "书籍PDF/教材",
+        "needs_icon_refresh": true,
         "type": "url",
         "value": "https://zh.z-library.sk/"
     },
     {
         "name": "图片/证件照编辑",
+        "needs_icon_refresh": true,
         "type": "url",
         "value": "https://photokit.com/?lang=zh"
     },
     {
-        "name": "大理大学文献数据库/图书馆",
-        "type": "url",
-        "value": "http://web.lib.dali.edu.cn/list-33-1.html"
-    },
-    {
         "name": "Zotero中文插件网址",
+        "needs_icon_refresh": true,
         "type": "url",
         "value": "https://zotero-chinese.com/"
     },
     {
         "name": "流程图_tool",
+        "needs_icon_refresh": true,
         "type": "url",
         "value": "https://mermaid.live/"
     },
     {
         "name": "JD",
+        "needs_icon_refresh": true,
         "type": "url",
         "value": "https://www.jd.com/?cu=true&utm_source=lianmeng__10__ntp.msn.cn&utm_medium=tuiguang&utm_campaign=t_2030767747_&utm_term=fb7693d9b2a44f788986144ecbc8fb38"
     }
