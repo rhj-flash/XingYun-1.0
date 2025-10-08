@@ -6,6 +6,12 @@
         "value": "D:/VPN/v2rayN-With-Core/v2rayN.exe"
     },
     {
+        "name": "GitHub",
+        "needs_icon_refresh": true,
+        "type": "url",
+        "value": "https://github.com/"
+    },
+    {
         "name": "中国知网（链接校园网打开）",
         "needs_icon_refresh": true,
         "type": "url",
@@ -16,12 +22,6 @@
         "needs_icon_refresh": true,
         "type": "url",
         "value": "https://gemini.google.com"
-    },
-    {
-        "name": "GitHub",
-        "needs_icon_refresh": true,
-        "type": "url",
-        "value": "https://github.com/"
     },
     {
         "name": "Grok",
@@ -125,12 +125,6 @@
         "value": "https://zh.wikipedia.org/"
     },
     {
-        "name": "软件网站",
-        "needs_icon_refresh": true,
-        "type": "url",
-        "value": "https://www.rjsos.com/win"
-    },
-    {
         "name": "电影",
         "needs_icon_refresh": true,
         "type": "url",
@@ -155,12 +149,6 @@
         "value": "https://photokit.com/?lang=zh"
     },
     {
-        "name": "Zotero中文插件网址",
-        "needs_icon_refresh": true,
-        "type": "url",
-        "value": "https://zotero-chinese.com/"
-    },
-    {
         "name": "流程图_tool",
         "needs_icon_refresh": true,
         "type": "url",
@@ -171,5 +159,31 @@
         "needs_icon_refresh": true,
         "type": "url",
         "value": "https://www.jd.com/?cu=true&utm_source=lianmeng__10__ntp.msn.cn&utm_medium=tuiguang&utm_campaign=t_2030767747_&utm_term=fb7693d9b2a44f788986144ecbc8fb38"
+    },
+    {
+        "name": "UI组件网站/UI",
+        "type": "url",
+        "value": "https://uiverse.io/"
+    },
+    {
+        "name": "Zotero中文插件网址",
+        "type": "url",
+        "value": "https://zotero-chinese.com/"
+    },
+    {
+        "name": "软件管家",
+        "type": "url",
+        "value": "https://www.softgj.com/"
+    },
+    {
+        "name": "软件网站",
+        "needs_icon_refresh": true,
+        "type": "url",
+        "value": "https://www.rjsos.com/win"
+    },
+    {
+        "name": "机器学习课程",
+        "type": "url",
+        "value": "https://www.bilibili.com/video/BV1Bq421A74G/?spm_id_from=333.337.search-card.all.click&vd_source=6be55cf96cb2a0cd178874467cc26ab1"
     }
 ]

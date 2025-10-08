@@ -3,14 +3,14 @@ import time
 import hashlib
 from urllib.parse import urlparse, urljoin
 from concurrent.futures import as_completed
-from PyQt5.QtCore import QEasingCurve, QParallelAnimationGroup, QFileInfo
+from PyQt5.QtCore import QEasingCurve, QParallelAnimationGroup, QFileInfo, pyqtProperty
 from PyQt5.QtCore import QRect
 from PyQt5.QtCore import QStringListModel, QTranslator, QCoreApplication, QPropertyAnimation, QPoint, QEvent, \
     QTimer, QObject, QRectF, QSize, QDateTime
-from PyQt5.QtGui import QColor, QPalette
+from PyQt5.QtGui import QColor, QPalette, QPen, QCursor
 from PyQt5.QtGui import QFontMetrics, QPainter
 from PyQt5.QtGui import QImage, QLinearGradient
-from PyQt5.QtWidgets import QGroupBox, QAction, QFileIconProvider
+from PyQt5.QtWidgets import QGroupBox, QAction, QFileIconProvider, QAbstractItemView
 from PyQt5.QtWidgets import (
     QHBoxLayout, QSplitter, QCompleter, QListWidgetItem, QDesktopWidget, QMenu, QSizePolicy, QStyledItemDelegate,
     QStyle, QGridLayout, QToolButton
@@ -2094,6 +2094,7 @@ def create_main_window():
     list_widget.setAcceptDrops(True)
     list_widget.model().rowsMoved.connect(save_list_order)
 
+
     # 搜索框
     search_edit = QLineEdit()
     search_edit.setPlaceholderText(tr('👁‍🗨search'))
@@ -2117,7 +2118,7 @@ def create_main_window():
     left_widget.setStyleSheet(left_widget_style)
 
     # 显示区域
-    display_area = QTextEdit()
+    display_area = SmoothTextEdit()
     display_area.setReadOnly(True)
     display_area.setStyleSheet(display_area_style)
 
@@ -4565,6 +4566,8 @@ class StyledScrollingDelegate(QStyledItemDelegate):
             self.hover_color = QColor("#E8ECEF")  # 夜间模式悬停颜色：稍亮的浅白色
             self.shadow_color = QColor(200, 200, 200, 60)  # 夜间模式阴影颜色：较亮的灰白色
             self.selected_text_color = QColor("#000000")  # 夜间模式选中字体颜色：黑色
+            self.drag_drop_line_color = QColor("#FFFFFF")  # 夜间模式拖拽线颜色：白色
+            self.drag_drop_line_width = 3  # 夜间模式线宽更粗
         else:
             self.even_color = QColor("#F7F9FC")  # 日间模式偶数行颜色：浅蓝灰色，干净高级
             self.odd_color = QColor("#EDF1F7")  # 日间模式奇数行颜色：稍深的蓝灰色，柔和对比
@@ -4572,147 +4575,61 @@ class StyledScrollingDelegate(QStyledItemDelegate):
             self.hover_color = QColor("#D1E0FF")  # 日间模式悬停颜色：浅灰蓝色，优雅过渡
             self.shadow_color = QColor(50, 50, 50, 50)  # 日间模式阴影颜色：深灰色，柔和高雅
             self.selected_text_color = QColor("#000000")  # 日间模式选中字体颜色：黑色
+            self.drag_drop_line_color = QColor("#000000")  # 日间模式拖拽线颜色：黑色
+            self.drag_drop_line_width = 2  # 日间模式线宽正常
 
-    def paint(self, painter, option, index):
-        # 在绘制前更新颜色，确保实时反映夜间模式
-        global night_mode
-        if self.night_mode != night_mode:
-            self.night_mode = night_mode
-            self.update_colors()
 
-        painter.save()
-        # 设置抗锯齿和平滑像素转换以提高渲染质量
-        painter.setRenderHints(QPainter.Antialiasing | QPainter.SmoothPixmapTransform | QPainter.TextAntialiasing)
+    def paint_drag_drop_line(self, painter, option, index):
+        """绘制拖拽交换位置时的指示线"""
+        # 检查是否是拖拽指示位置
+        if (hasattr(self.list_widget, 'dropIndicatorRect') and
+                self.list_widget.dropIndicatorRect().isValid() and
+                self.list_widget.dropIndicatorPosition() != QAbstractItemView.OnItem):
 
-        # 获取当前项
-        item = self.list_widget.itemFromIndex(index)
-        if not item:
-            painter.restore()
-            return
+            drop_rect = self.list_widget.dropIndicatorRect()
+            drop_position = self.list_widget.dropIndicatorPosition()
 
-        # 如果项隐藏，则不绘制
-        if item.isHidden():
-            painter.restore()
-            return
+            # 设置线条颜色和宽度
+            line_color = self.drag_drop_line_color
+            line_width = self.drag_drop_line_width
 
-        # 获取可见项索引
-        visible_index = self.get_visible_index(index)
-        if visible_index == -1:
-            painter.restore()
-            return
+            painter.setPen(QPen(line_color, line_width, Qt.SolidLine))
 
-        # 获取悬停进度并确保平滑
-        hover_progress = min(max(self.list_widget.hover_states.get(id(item), 0.0), 0.0), 1.0)
-        is_hovered = hover_progress > 0
-        # 使用缓入缓出二次函数计算动画进度
-        eased_progress = self.easeInOutQuad(hover_progress)
+            # 根据拖拽位置绘制不同的线条
+            if drop_position == QAbstractItemView.AboveItem:
+                # 在上方插入
+                y = drop_rect.top()
+                painter.drawLine(drop_rect.left() + 10, y, drop_rect.right() - 10, y)
+                # 添加小箭头指示
+                painter.drawLine(drop_rect.left() + 10, y, drop_rect.left() + 20, y - 5)
+                painter.drawLine(drop_rect.left() + 10, y, drop_rect.left() + 20, y + 5)
 
-        # 计算背景颜色
-        bg_color = self.even_color if visible_index % 2 == 0 else self.odd_color
-        if option.state & QStyle.State_Selected:
-            bg_color = self.selected_color
-        if is_hovered:
-            bg_color = self.mix_colors(bg_color, self.hover_color, eased_progress)
+            elif drop_position == QAbstractItemView.BelowItem:
+                # 在下方插入
+                y = drop_rect.bottom()
+                painter.drawLine(drop_rect.left() + 10, y, drop_rect.right() - 10, y)
+                # 添加小箭头指示
+                painter.drawLine(drop_rect.right() - 10, y, drop_rect.right() - 20, y - 5)
+                painter.drawLine(drop_rect.right() - 10, y, drop_rect.right() - 20, y + 5)
 
-        # 动画参数配置：抽卡片效果
-        max_offset = 19  # 向右滑动的最大像素距离
-        scale = 1.0 + 0.07 * eased_progress  # 轻微放大效果，最大 1.05 倍
-        shadow_opacity = 0.3 + 0.3 * eased_progress  # 动态阴影透明度
+    def get_visible_index(self, index):
+        """获取可见项的索引"""
+        row = index.row()
+        visible_count = 0
+        for i in range(self.list_widget.count()):
+            item = self.list_widget.item(i)
+            if not item.isHidden():
+                if i == row:
+                    return visible_count
+                visible_count += 1
+        return -1
 
-        # 获取原始项矩形区域
-        original_rect = option.rect
-
-        # 应用悬停变换
-        transformed_rect = QRectF(original_rect)
-        if is_hovered:
-            # 计算偏移量
-            offset_x = max_offset * eased_progress
-            transformed_rect.translate(offset_x, 0)
-
-            # 应用缩放
-            center = transformed_rect.center()
-            painter.translate(center)
-            painter.scale(scale, scale)
-            painter.translate(-center)
-
-        # 绘制阴影（仅在悬停时）
-        if is_hovered:
-            shadow_path = QPainterPath()
-            shadow_rect = QRectF(transformed_rect.adjusted(3, 3, -3, -3))
-            shadow_path.addRoundedRect(shadow_rect, 15, 15)
-            shadow_color = self.shadow_color
-            shadow_color.setAlphaF(shadow_opacity)
-            painter.setPen(Qt.NoPen)
-            painter.setBrush(shadow_color)
-            painter.drawPath(shadow_path)
-
-        # 绘制圆角背景
-        path = QPainterPath()
-        radius = 15
-        rect_f = QRectF(transformed_rect.adjusted(2, 2, -2, -2))
-        path.addRoundedRect(rect_f, radius, radius)
-
-        # 应用渐变背景
-        gradient = QLinearGradient(rect_f.topLeft(), rect_f.bottomRight())
-        gradient.setColorAt(0, bg_color.lighter(190))
-        gradient.setColorAt(1, bg_color.darker(100))
-        painter.setPen(Qt.NoPen)
-        painter.fillPath(path, gradient)
-
-        # 恢复画家状态以绘制图标和文本（避免缩放影响）
-        painter.restore()
-        painter.save()
-
-        # 绘制图标
-        icon = item.icon()
-        if not icon.isNull():
-            icon_rect = QRect(
-                int(transformed_rect.left() + 12),
-                int(transformed_rect.top() + (transformed_rect.height() - 20) / 2),
-                20, 20
-            )
-            icon.paint(painter, icon_rect, Qt.AlignCenter)
-
-        # 绘制文本
-        text = item.text() or ""
-        font = option.font
-        font.setPointSize(12)
-        font.setStyleStrategy(QFont.PreferAntialias)
-        painter.setFont(font)
-        fm = QFontMetrics(font)
-        text_width = fm.horizontalAdvance(text)
-        available_width = transformed_rect.width() - 40
-
-        # 获取滚动数据
-        scroll_data = item.data(Qt.UserRole + 1)
-        offset = scroll_data[0] if scroll_data and len(scroll_data) > 0 else 0
-
-        # 设置文本颜色
-        text_color = option.palette.color(QPalette.Text)
-        if option.state & QStyle.State_Selected:
-            text_color = self.selected_text_color
-        if is_hovered:
-            if self.night_mode:
-                text_color = QColor("#000000")
-            else:
-                text_color = text_color.lighter(110)
-
-        painter.setPen(text_color)
-
-        # 绘制文本区域
-        text_rect = QRect(transformed_rect.toRect())
-        text_rect.setLeft(int(transformed_rect.left() + 40))
-        text_rect.setWidth(int(available_width))
-
-        if text_width > available_width:
-            painter.setClipRect(text_rect)
-            adjusted_rect = QRect(text_rect)
-            adjusted_rect.setLeft(int(text_rect.left() - offset))
-            painter.drawText(adjusted_rect, Qt.AlignLeft | Qt.AlignVCenter, text)
+    def easeInOutQuad(self, progress):
+        """缓入缓出二次函数"""
+        if progress < 0.5:
+            return 2 * progress * progress
         else:
-            painter.drawText(text_rect, Qt.AlignLeft | Qt.AlignVCenter, text)
-
-        painter.restore()
+            return -1 + (4 - 2 * progress) * progress
 
     def mix_colors(self, color1, color2, factor):
         """混合两种颜色"""
@@ -4724,171 +4641,6 @@ class StyledScrollingDelegate(QStyledItemDelegate):
         b = int(b1 + (b2 - b1) * factor)
 
         return QColor(r, g, b)
-
-    def ease_animation(self, progress):
-        """缓动函数（例如，ease-out）"""
-        return progress  # 可以替换为更复杂的缓动函数
-
-    def enterEvent(self, event):
-        """鼠标进入事件"""
-        index = self.indexAt(event.pos())
-        if index.isValid():
-            item = self.list_widget.item(index.row())
-            if item:
-                item_id = item.data(Qt.UserRole)
-                self.start_hover_animation(item_id)
-
-    def leaveEvent(self, event):
-        """鼠标离开事件"""
-        index = self.indexAt(event.pos())
-        if index.isValid():
-            item = self.list_widget.item(index.row())
-            if item:
-                item_id = item.data(Qt.UserRole)
-                self.start_hover_animation(item_id, reverse=True)
-
-    def mouseMoveEvent(self, event):
-        """鼠标移动事件"""
-        index = self.indexAt(event.pos())
-        if index.isValid():
-            item = self.list_widget.item(index.row())
-            if item:
-                item_id = item.data(Qt.UserRole)
-                if item_id != getattr(self, 'current_hover_item_id', None):
-                    # 如果当前悬停项改变，则启动新的悬停动画
-                    if hasattr(self, 'current_hover_item_id') and self.current_hover_item_id is not None:
-                        self.start_hover_animation(self.current_hover_item_id, reverse=True)  # 反向启动之前的动画
-                    self.current_hover_item_id = item_id
-                    self.start_hover_animation(item_id)
-        else:
-            # 如果鼠标不在任何项上，且有悬停项，则反向启动动画
-            if hasattr(self, 'current_hover_item_id') and self.current_hover_item_id is not None:
-                self.start_hover_animation(self.current_hover_item_id, reverse=True)
-                self.current_hover_item_id = None
-
-    def start_hover_animation(self, item_id, reverse=False):
-        """启动悬停动画"""
-        if item_id in self.hover_animations:
-            self.hover_animations[item_id].stop()  # 停止之前的动画
-
-        animation = QPropertyAnimation(self, b"hover_progress")
-        animation.setItemId(item_id)  # 使用自定义方法存储 item_id
-        animation.setDuration(250)  # 动画时长
-        animation.setStartValue(self.hover_states.get(item_id, 0.0))
-        animation.setEndValue(0.0 if reverse else 1.0)
-        animation.setEasingCurve(QEasingCurve.Linear)  # 动画曲线
-        animation.finished.connect(lambda: self.animation_finished(item_id))  # 动画完成信号
-
-        animation.valueChanged.connect(self.update_hover_state)  # 连接到更新悬停状态的槽函数
-        self.hover_animations[item_id] = animation
-        animation.start()
-
-    def animation_finished(self, item_id):
-        """动画完成时清理"""
-        if item_id in self.hover_animations:
-            del self.hover_animations[item_id]
-        self.viewport().update()
-
-    def update_hover_state(self, value):
-        """更新悬停状态"""
-        animation = self.sender()
-        if animation:
-            item_id = animation.itemId()  # 使用自定义方法获取 item_id
-            self.hover_states[item_id] = value
-            self.update_scroll_positions()  # 更新滚动位置
-            self.viewport().update()
-
-    def setHoverProgress(self, progress):
-        """设置悬停进度"""
-        animation = self.sender()
-        if animation:
-            item_id = animation.itemId()
-            self.hover_states[item_id] = progress
-            self.viewport().update()
-
-    def hoverProgress(self):
-        """获取悬停进度"""
-        animation = self.sender()
-        if animation:
-            item_id = animation.itemId()
-            return self.hover_states.get(item_id, 0.0)
-        return 0.0
-
-    def update_scroll_positions(self):
-        viewport = self.viewport()
-        viewport_width = viewport.width()
-        fm = QFontMetrics(self.font())
-
-        for i in range(self.count()):
-            item = self.item(i)
-            if not item or item == self.current_hover_item:  # 改为 current_hover_item
-                continue
-
-            text = item.text()
-            text_width = fm.horizontalAdvance(text)
-            available_width = viewport_width - 35
-
-            if text_width > available_width:
-                item_id = item.data(Qt.UserRole)
-                if item_id not in self.scroll_animations:
-                    self.start_scroll_animation(item, text_width, available_width)
-
-    def start_scroll_animation(self, item, text_width, available_width):
-        """启动滚动动画"""
-        item_id = item.data(Qt.UserRole)
-        if item_id in self.scroll_animations:
-            self.scroll_animations[item_id].stop()
-
-        max_offset = text_width - available_width
-        duration = max(5000, int(max_offset * 20))  # 动画时长与文本长度成正比
-
-        animation = QPropertyAnimation(self, b"scroll_offset")
-        animation.setItemId(item_id)  # 使用自定义方法存储 item_id
-        animation.setDuration(duration)
-        animation.setStartValue(0)
-        animation.setEndValue(max_offset)
-        animation.setLoopCount(-1)  # 无限循环
-        animation.setEasingCurve(QEasingCurve.Linear)
-
-        animation.valueChanged.connect(self.update_scroll_offset)
-        self.scroll_animations[item_id] = animation
-        animation.start()
-
-    def update_scroll_offset(self, offset):
-        """更新滚动偏移"""
-        animation = self.sender()
-        if animation:
-            item_id = animation.itemId()
-            for i in range(self.count()):
-                item = self.item(i)
-                if item and item.data(Qt.UserRole) == item_id:
-                    item.setData(Qt.UserRole + 1, (offset,))  # 存储偏移量
-                    break
-            self.viewport().update()
-
-    def setScrollOffset(self, offset):
-        """设置滚动偏移"""
-        animation = self.sender()
-        if animation:
-            item_id = animation.itemId()
-            for i in range(self.count()):
-                item = self.item(i)
-                if item and item.data(Qt.UserRole) == item_id:
-                    item.setData(Qt.UserRole + 1, (offset,))  # 存储偏移量
-                    break
-            self.viewport().update()
-
-    def scrollOffset(self):
-        """获取滚动偏移"""
-        animation = self.sender()
-        if animation:
-            item_id = animation.itemId()
-            for i in range(self.count()):
-                item = self.item(i)
-                if item and item.data(Qt.UserRole) == item_id:
-                    scroll_data = item.data(Qt.UserRole + 1)
-                    return scroll_data[0] if scroll_data else 0
-        return 0
 
 
 class UnifiedItemDelegate(QStyledItemDelegate):
@@ -5178,34 +4930,269 @@ class UnifiedItemDelegate(QStyledItemDelegate):
 
 # 列表控件
 class SmoothListWidget(QListWidget):
+    """
+    一个自定义的QListWidget，增加了在拖放项目时自动滚动的功能，
+    并实现了平滑的悬停动画、文本滚动和鼠标滚轮滚动效果。
+    """
+
     def __init__(self, status_bar, parent=None):
         super().__init__(parent)
         self.status_bar = status_bar
+
+        # 先初始化所有属性
+        self._drag_line_progress = 0.0  # 动画进度 0.0 到 1.0
+        self.drag_line_y = 0  # 线条位置
+        self.is_showing_drag_line = False
+
+        # 然后再设置其他属性
         self.setItemDelegate(UnifiedItemDelegate(self))
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
         self.setMouseTracking(True)
 
-        # 使用字典来跟踪所有项的悬停状态
-        self.hover_states = {}  # {id(item): hover_progress}
-        self.current_hover_item = None  # 初始化 current_hover_item
+        # 隐藏默认的拖拽指示线
+        self.setDropIndicatorShown(False)
 
-        # 动画定时器
+        # --- 实现平滑滚轮滚动的相关设置 ---
+        self.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
+        self.scroll_animation = QPropertyAnimation(self.verticalScrollBar(), b"value", self)
+        self.scroll_animation.setDuration(250)
+        self.scroll_animation.setEasingCurve(QEasingCurve.OutCubic)
+
+        # --- 拖拽线动画相关 ---
+        self.drag_line_animation = QPropertyAnimation(self, b"drag_line_progress")
+        self.drag_line_animation.setDuration(300)
+        self.drag_line_animation.setEasingCurve(QEasingCurve.OutBack)
+
+        self.hover_states = {}
+        self.current_hover_item = None
+
         self.animation_timer = QTimer(self)
         self.animation_timer.timeout.connect(self.update_animations)
-        self.animation_timer.start(5)  # ~120fps
+        self.animation_timer.start(5)
 
-        # 原有定时器
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.update_scroll_positions)
         self.timer.start(12)
 
+        self.scroll_timer = QTimer(self)
+        self.scroll_timer.setInterval(25)
+        self.scroll_timer.timeout.connect(self._perform_auto_scroll)
+        self.scroll_direction = 0
+
         self.model().rowsInserted.connect(self.on_rows_inserted)
+
+    # --- 新增：拖拽线动画属性 ---
+    def get_drag_line_progress(self):
+        return self._drag_line_progress
+
+    def set_drag_line_progress(self, progress):
+        self._drag_line_progress = progress
+        self.viewport().update()  # 触发重绘
+
+    drag_line_progress = pyqtProperty(float, get_drag_line_progress, set_drag_line_progress)
+
+    def startDrag(self, supportedActions):
+        """开始拖拽时启动线条动画"""
+        # 先停止之前的动画
+        self.drag_line_animation.stop()
+
+        # 启动弹出动画
+        self.drag_line_animation.setStartValue(0.0)
+        self.drag_line_animation.setEndValue(1.0)
+        self.drag_line_animation.start()
+
+        self.is_showing_drag_line = True
+        super().startDrag(supportedActions)
+
+    def dragLeaveEvent(self, event):
+        """拖拽离开时隐藏线条"""
+        self.hide_drag_line()
+        super().dragLeaveEvent(event)
+
+    def dropEvent(self, event):
+        """拖拽完成时隐藏线条"""
+        self.hide_drag_line()
+        super().dropEvent(event)
+
+    def hide_drag_line(self):
+        """隐藏拖拽线条"""
+        if self.is_showing_drag_line:
+            self.drag_line_animation.stop()
+            self.drag_line_animation.setStartValue(self._drag_line_progress)
+            self.drag_line_animation.setEndValue(0.0)
+            self.drag_line_animation.start()
+            self.is_showing_drag_line = False
+
+    def paintEvent(self, event):
+        """重写paintEvent以自定义拖拽指示线"""
+        super().paintEvent(event)
+
+        # 只在显示拖拽线时绘制
+        if self.is_showing_drag_line and self._drag_line_progress > 0:
+            painter = QPainter(self.viewport())
+            painter.setRenderHint(QPainter.Antialiasing)
+
+            # 根据动画进度计算缩放和透明度
+            scale = self._drag_line_progress
+            opacity = self._drag_line_progress
+
+            # 根据夜间模式选择颜色
+            global night_mode
+            if night_mode:
+                # 夜间模式：发光白色效果
+                glow_color = QColor(255, 255, 255, int(80 * opacity))
+                halo_color = QColor(255, 255, 255, int(150 * opacity))
+                core_color = QColor(255, 255, 255, int(255 * opacity))
+            else:
+                # 日间模式：模糊黑色效果
+                glow_color = QColor(0, 0, 0, int(40 * opacity))
+                halo_color = QColor(0, 0, 0, int(80 * opacity))
+                core_color = QColor(0, 0, 0, int(180 * opacity))
+
+            # 根据动画进度计算线条宽度（从细到粗）
+            glow_height = 12 * scale
+            halo_height = 8 * scale
+            core_height = 6 * scale
+
+            # 绘制三层圆角矩形，带有动画效果
+            # 外层
+            glow_rect = QRectF(0, self.drag_line_y - glow_height / 2, self.width(), glow_height)
+            glow_path = QPainterPath()
+            glow_path.addRoundedRect(glow_rect, glow_height / 2, glow_height / 2)
+            painter.fillPath(glow_path, glow_color)
+
+            # 中层
+            halo_rect = QRectF(0, self.drag_line_y - halo_height / 2, self.width(), halo_height)
+            halo_path = QPainterPath()
+            halo_path.addRoundedRect(halo_rect, halo_height / 2, halo_height / 2)
+            painter.fillPath(halo_path, halo_color)
+
+            # 核心层
+            core_rect = QRectF(0, self.drag_line_y - core_height / 2, self.width(), core_height)
+            core_path = QPainterPath()
+            core_path.addRoundedRect(core_rect, core_height / 2, core_height / 2)
+            painter.fillPath(core_path, core_color)
+
+    # --- 新增结束 ---
+
+    def wheelEvent(self, event: QtGui.QWheelEvent):
+        """
+        重写 wheelEvent 以实现平滑的滚轮滚动效果。
+        """
+        # 如果有动画正在进行，先停止它
+        self.scroll_animation.stop()
+
+        current_value = self.verticalScrollBar().value()
+        # angleDelta().y() 返回滚轮垂直滚动的距离，通常是120的倍数
+        delta = event.angleDelta().y()
+
+        # 定义每次滚轮操作滚动的像素值
+        scroll_step = 80
+        if delta > 0:  # 向上滚动
+            target_value = current_value - scroll_step
+        else:  # 向下滚动
+            target_value = current_value + scroll_step
+
+        # 确保目标值不会超出滚动条的范围 (0 到 最大值)
+        target_value = max(0, min(target_value, self.verticalScrollBar().maximum()))
+
+        # 设置动画的起始值和结束值
+        self.scroll_animation.setStartValue(current_value)
+        self.scroll_animation.setEndValue(target_value)
+
+        # 启动动画
+        self.scroll_animation.start()
+
+    def _perform_auto_scroll(self):
+        """
+        执行拖拽时的自动滚动操作。
+        """
+        if self.scroll_direction == 0:
+            return
+
+        scroll_bar = self.verticalScrollBar()
+        # --- 修改：降低滚动速度 ---
+        # 将步长从 10 降低到 4，使滚动变慢
+        step = 6
+        new_value = scroll_bar.value() + self.scroll_direction * step
+
+        if 0 <= new_value <= scroll_bar.maximum():
+            scroll_bar.setValue(new_value)
+
+    def dragEnterEvent(self, event: QtGui.QDragEnterEvent):
+        """
+        重写 dragEnterEvent，接受拖动操作。
+        """
+        event.accept()
+        super().dragEnterEvent(event)
+
+    def dragMoveEvent(self, event: QtGui.QDragMoveEvent):
+        """
+        重写 dragMoveEvent，在拖动项目时检测鼠标位置以触发自动滚动和更新线条位置。
+        """
+        super().dragMoveEvent(event)
+
+        # 实时更新拖拽线位置
+        if self.is_showing_drag_line:
+            self.update_drag_line_position(event.pos())
+
+        pos = event.pos()
+        viewport_height = self.viewport().height()
+        hotspot_height = 50
+
+        if pos.y() < hotspot_height:
+            self.scroll_direction = -1
+            if not self.scroll_timer.isActive():
+                self.scroll_timer.start()
+        elif pos.y() > viewport_height - hotspot_height:
+            self.scroll_direction = 1
+            if not self.scroll_timer.isActive():
+                self.scroll_timer.start()
+        else:
+            self.scroll_direction = 0
+            if self.scroll_timer.isActive():
+                self.scroll_timer.stop()
+        event.accept()
+
+    def update_drag_line_position(self, pos=None):
+        """更新拖拽线位置"""
+        if pos is None:
+            pos = self.mapFromGlobal(QCursor.pos())
+
+        # 找到鼠标下方的项目
+        target_item = self.itemAt(pos)
+
+        if target_item:
+            item_rect = self.visualItemRect(target_item)
+            # 判断插入位置（上方或下方）
+            if pos.y() < item_rect.center().y():
+                self.drag_line_y = item_rect.top()
+            else:
+                self.drag_line_y = item_rect.bottom()
+        else:
+            # 如果没有目标项目，在列表末尾绘制
+            if self.count() > 0:
+                last_item = self.item(self.count() - 1)
+                last_rect = self.visualItemRect(last_item)
+                self.drag_line_y = last_rect.bottom()
+            else:
+                self.drag_line_y = 10
+
+        # 触发重绘
+        self.viewport().update()
+
+    def dragLeaveEvent(self, event: QtGui.QDragLeaveEvent):
+        """
+        重写 dragLeaveEvent，当拖动操作离开控件时停止滚动。
+        """
+        self.scroll_direction = 0
+        if self.scroll_timer.isActive():
+            self.scroll_timer.stop()
+        super().dragLeaveEvent(event)
 
     def show_context_menu(self, pos):
         """
         显示右键上下文菜单
-        参数:
-            pos: 鼠标点击的位置（QPoint）
         """
         item = self.itemAt(pos)
         if not item:
@@ -5238,9 +5225,7 @@ class SmoothListWidget(QListWidget):
 
     def reload_icon(self, item):
         """
-        重新加载选中项的图标（占位函数）
-        参数:
-            item: 选中的 QListWidgetItem
+        重新加载选中项的图标
         """
         script_data = item.data(Qt.UserRole)
         if not script_data:
@@ -5252,39 +5237,26 @@ class SmoothListWidget(QListWidget):
     def update_animations(self):
         """更新所有项的动画状态"""
         needs_update = False
+        animation_duration = 300
+        step = (5.0 / animation_duration) * 2
 
-        # 动画持续时间（毫秒）
-        animation_duration = 300  # 可配置的动画时间，单位：毫秒
-
-        # 计算每帧的步长，基于定时器间隔（5ms）和期望的总动画时间
-        step = (5.0 / animation_duration) * 2  # 调整步长以控制动画速度
-
-        # 更新所有项的悬停状态
         for i in range(self.count()):
             item = self.item(i)
             item_id = id(item)
-
-            # 确定目标状态 (1.0 如果是当前悬停项，否则 0.0)
             target = 1.0 if item == self.current_hover_item else 0.0
-
-            # 获取当前进度或初始化
             current = self.hover_states.get(item_id, 0.0)
 
-            # 如果已经达到目标状态，跳过
             if current == target:
                 continue
 
-            # 计算新状态
             if target > current:
                 new_progress = min(target, current + step)
             else:
                 new_progress = max(target, current - step)
 
-            # 更新状态
             self.hover_states[item_id] = new_progress
             needs_update = True
 
-            # 如果动画完成，清理字典
             if new_progress == 0.0:
                 del self.hover_states[item_id]
 
@@ -5298,26 +5270,20 @@ class SmoothListWidget(QListWidget):
 
         for i in range(self.count()):
             item = self.item(i)
-            if not item or item == self.current_hover_item:  # 改为 current_hover_item
+            if not item or item == self.current_hover_item:
                 continue
 
             text = item.text()
             text_width = fm.horizontalAdvance(text)
-            avail_width = viewport_width - 30  # 25(icon) + 5(margin)
+            avail_width = viewport_width - 30
 
             if text_width <= avail_width:
                 continue
 
-            # [current_offset, direction, max_offset, speed_factor]
             scroll_data = item.data(Qt.UserRole + 1) or [0, 1, text_width - avail_width, 1.0]
-
-            # 动态速度计算（开头和结尾稍慢）
             speed = 0.8 if scroll_data[0] < 10 or scroll_data[0] > scroll_data[2] - 10 else 1.2
-
-            # 更新位置（基础速度0.5 * 动态系数）
             new_offset = scroll_data[0] + (0.4 * speed) * scroll_data[1]
 
-            # 边界反弹逻辑
             if new_offset >= scroll_data[2]:
                 new_offset = scroll_data[2]
                 scroll_data[1] = -1
@@ -5338,7 +5304,7 @@ class SmoothListWidget(QListWidget):
     def is_text_overflow(self, item):
         fm = QFontMetrics(self.font())
         text_width = fm.horizontalAdvance(item.text())
-        available_width = self.viewport().width() - 30  # 25(icon) + 5(margin)
+        available_width = self.viewport().width() - 30
         return text_width > available_width
 
     def updateScrollingOffsets(self):
@@ -5349,16 +5315,13 @@ class SmoothListWidget(QListWidget):
 
             scroll_data = item.data(Qt.UserRole + 1)
             if scroll_data is None:
-                scroll_data = [0, 1]  # [current_offset, direction]
+                scroll_data = [0, 1]
 
             offset, direction = scroll_data
             fm = QFontMetrics(self.font())
             max_offset = max(0, fm.horizontalAdvance(item.text()) - (self.viewport().width() - 30))
-
-            # 调整步长为0.3（原为0.5）让滑动变慢
             new_offset = offset + 0.3 * direction
 
-            # 边界检测
             if new_offset >= max_offset:
                 new_offset = max_offset
                 direction = -1
@@ -5371,18 +5334,15 @@ class SmoothListWidget(QListWidget):
         self.viewport().update()
 
     def mouseMoveEvent(self, event):
-        # 更新当前悬停项
         item = self.itemAt(event.pos())
         self.current_hover_item = item
 
-        # 原有状态栏更新逻辑
         if item:
             script_data = item.data(Qt.UserRole)
             if script_data:
                 script_name = script_data.get('name', '未知脚本')
                 script_type = script_data.get('type', 'file')
                 script_value = script_data.get('value', '未知路径')
-
                 separator = "     ｜    地址： "
                 merge_separator = " ➔ "
 
@@ -5402,7 +5362,6 @@ class SmoothListWidget(QListWidget):
                 max_length = 130
                 if len(status_text) > max_length:
                     status_text = status_text[:max_length - 3] + "..."
-
                 self.status_bar.setText(status_text)
 
             if self.is_text_overflow(item) or script_data.get('type') == 'merge':
@@ -5429,6 +5388,57 @@ class SmoothListWidget(QListWidget):
         self.status_bar.setText(">>> 准备就绪🚀")
         super().leaveEvent(event)
 
+
+class SmoothTextEdit(QTextEdit):
+    """
+    一个自定义的QTextEdit，重写了wheelEvent以实现平滑的滚轮滚动效果。
+    """
+    def __init__(self, parent=None):
+        """
+        SmoothTextEdit的构造函数。
+
+        Args:
+            parent (QWidget): 父级窗口，默认为None。
+        """
+        super().__init__(parent)
+        # 创建一个属性动画，目标是垂直滚动条的'value'属性
+        self.scroll_animation = QPropertyAnimation(self.verticalScrollBar(), b"value", self)
+        self.scroll_animation.setDuration(250)  # 动画时长，与左侧列表保持一致
+        self.scroll_animation.setEasingCurve(QEasingCurve.OutCubic)  # 使用平滑的缓出曲线
+
+    def wheelEvent(self, event: QtGui.QWheelEvent):
+        """
+        重写wheelEvent以捕获鼠标滚轮事件，并用动画平滑地滚动内容。
+        """
+        # 如果有动画正在进行，先停止它，防止动画冲突
+        self.scroll_animation.stop()
+
+        # 获取当前滚动条的垂直位置
+        current_value = self.verticalScrollBar().value()
+
+        # angleDelta().y() 返回滚轮垂直滚动的距离，正数向上，负数向下
+        delta = event.angleDelta().y()
+
+        # 定义每次滚轮操作滚动的像素值，你可以调整这个值来改变滚动速度
+        scroll_step = 80
+        if delta > 0:  # 向上滚动
+            target_value = current_value - scroll_step
+        else:  # 向下滚动
+            target_value = current_value + scroll_step
+
+        # 确保目标值不会超出滚动条的有效范围 (0 到 最大值)
+        target_value = max(0, min(target_value, self.verticalScrollBar().maximum()))
+
+        # 如果目标值和当前值相同（比如已经滚动到顶部或底部），则不执行动画
+        if target_value == current_value:
+            return
+
+        # 设置动画的起始值和结束值
+        self.scroll_animation.setStartValue(current_value)
+        self.scroll_animation.setEndValue(target_value)
+
+        # 启动动画
+        self.scroll_animation.start()
 
 class ScrollingItemDelegate(QStyledItemDelegate):
     def __init__(self, parent):

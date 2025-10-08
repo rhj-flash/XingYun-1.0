@@ -68,14 +68,6 @@ if os.path.exists(dictionary_path):
 else:
     print(f"❌ 词库文件未找到: {dictionary_path}")
 
-if os.path.exists(dictionary_path):
-    with open(dictionary_path, 'r', encoding='utf-8') as file:
-        content = file.read()
-        print("单词文本已加载。")
-else:
-    print("文件不存在，无法读取内容。")
-    print(f"尝试从以下路径读取文件: {dictionary_path}")
-
 # 多线程执行器
 executor = ThreadPoolExecutor(max_workers=5)
 
